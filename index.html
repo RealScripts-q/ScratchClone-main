@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Website</title>
+    <title>Code Playground</title>
     <style>
-        /* General Styles */
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
             margin: 0;
             padding: 0;
+            background-color: #f4f4f4;
         }
 
         header {
@@ -20,42 +19,48 @@
             padding: 20px;
         }
 
-        footer {
-            text-align: center;
-            padding: 10px;
-            background-color: #333;
-            color: white;
-        }
-
-        h1, h2 {
-            margin: 0;
-        }
-
-        p {
-            margin: 10px 0;
-        }
-
-        /* Block Container */
         .container {
             display: flex;
-            justify-content: space-around;
+            height: 90vh;
             padding: 20px;
+            justify-content: space-between;
+            align-items: flex-start;
         }
 
-        /* Block Styles */
-        .block {
+        .editor {
+            width: 30%;
             background-color: #fff;
-            width: 200px;
-            padding: 20px;
+            padding: 10px;
             border: 2px solid #ddd;
-            border-radius: 8px;
+            border-radius: 5px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            transition: background-color 0.3s;
         }
 
-        .block h2 {
-            font-size: 1.2rem;
+        .editor textarea {
+            width: 100%;
+            height: 200px;
+            font-family: monospace;
+            font-size: 16px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            resize: vertical;
+        }
+
+        .output {
+            width: 60%;
+            background-color: #fff;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            height: 100%;
+            overflow: auto;
+            white-space: pre-wrap;
         }
 
         button {
@@ -65,6 +70,7 @@
             border: none;
             cursor: pointer;
             border-radius: 5px;
+            margin-top: 10px;
         }
 
         button:hover {
@@ -74,42 +80,61 @@
 </head>
 <body>
     <header>
-        <h1>Welcome to My Interactive Website</h1>
+        <h1>Interactive Code Playground</h1>
     </header>
 
-    <main>
-        <div class="container">
-            <div class="block" id="block1">
-                <h2>Block 1</h2>
-                <p>This is the first block. Click to change color!</p>
-                <button onclick="changeColor('block1')">Change Color</button>
-            </div>
-            <div class="block" id="block2">
-                <h2>Block 2</h2>
-                <p>This is the second block. Click to change color!</p>
-                <button onclick="changeColor('block2')">Change Color</button>
-            </div>
-            <div class="block" id="block3">
-                <h2>Block 3</h2>
-                <p>This is the third block. Click to change color!</p>
-                <button onclick="changeColor('block3')">Change Color</button>
-            </div>
-        </div>
-    </main>
+    <div class="container">
+        <div class="editor">
+            <h2>HTML Code</h2>
+            <textarea id="htmlCode" placeholder="Write HTML code here..."></textarea>
 
-    <footer>
-        <p>&copy; 2025 Interactive Website</p>
-    </footer>
+            <h2>CSS Code</h2>
+            <textarea id="cssCode" placeholder="Write CSS code here..."></textarea>
+
+            <h2>JavaScript Code</h2>
+            <textarea id="jsCode" placeholder="Write JavaScript code here..."></textarea>
+
+            <button onclick="runCode()">Run Code</button>
+        </div>
+
+        <div class="output" id="output">
+            <h2>Output</h2>
+            <iframe id="outputFrame" style="width: 100%; height: 100%; border: none;"></iframe>
+        </div>
+    </div>
 
     <script>
-        // JavaScript function to change color of a block
-        function changeColor(blockId) {
-            // Get the block by ID
-            var block = document.getElementById(blockId);
-            // Generate a random color
-            var randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
-            // Apply the random color to the block's background
-            block.style.backgroundColor = randomColor;
+        function runCode() {
+            // Get the values of HTML, CSS, and JavaScript
+            const htmlCode = document.getElementById('htmlCode').value;
+            const cssCode = document.getElementById('cssCode').value;
+            const jsCode = document.getElementById('jsCode').value;
+
+            // Prepare the complete code to be injected into the iframe
+            const iframe = document.getElementById('outputFrame');
+            const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+
+            // Set the HTML, CSS, and JavaScript in the iframe
+            iframeDocument.open();
+            iframeDocument.write(`
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <style>
+                        ${cssCode}
+                    </style>
+                </head>
+                <body>
+                    ${htmlCode}
+                    <script>
+                        ${jsCode}
+                    </script>
+                </body>
+                </html>
+            `);
+            iframeDocument.close();
         }
     </script>
 </body>
