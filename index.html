@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scratch Clone</title>
     <style>
-        /* styles.css */
+        /* Global Styles */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -40,6 +40,8 @@
             padding: 10px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            min-width: 150px;
+            z-index: 10;
         }
 
         .block {
@@ -57,6 +59,57 @@
         .draggable {
             cursor: pointer;
         }
+
+        #playground {
+            position: fixed;
+            top: 100px;
+            left: 160px;
+            width: 400px;
+            height: 300px;
+            background-color: #ecf0f1;
+            border: 2px dashed #7f8c8d;
+            padding: 10px;
+            overflow: auto;
+        }
+
+        #run-buttons {
+            position: fixed;
+            top: 420px;
+            left: 160px;
+        }
+
+        #run-buttons button {
+            padding: 10px;
+            margin-right: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #green-flag {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        #red-button {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .block-in-playground {
+            background-color: #f39c12;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .block-in-playground:hover {
+            background-color: #e67e22;
+        }
     </style>
 </head>
 <body>
@@ -69,43 +122,83 @@
         <div class="block" data-action="move">Move</div>
         <div class="block" data-action="turn">Turn</div>
         <div class="block" data-action="say">Say</div>
+        <div class="block" data-action="change-color">Change Color</div>
+        <div class="block" data-action="wait">Wait</div>
+        <div class="block" data-action="hide">Hide</div>
+        <div class="block" data-action="show">Show</div>
+        <div class="block" data-action="go-to">Go to X, Y</div>
+        <div class="block" data-action="play-sound">Play Sound</div>
+    </div>
+
+    <div id="playground">
+        <p><strong>Code Playground</strong></p>
+    </div>
+
+    <div id="run-buttons">
+        <button id="green-flag">Green Flag (Run)</button>
+        <button id="red-button">Stop</button>
     </div>
 
     <script>
-        // script.js
-
-        // Handling Dragging for Sprite
-        const sprite = document.getElementById('sprite');
-        let isDragging = false;
-        let offsetX, offsetY;
-
-        sprite.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            offsetX = e.clientX - sprite.getBoundingClientRect().left;
-            offsetY = e.clientY - sprite.getBoundingClientRect().top;
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                sprite.style.left = `${e.clientX - offsetX}px`;
-                sprite.style.top = `${e.clientY - offsetY}px`;
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-
-        // Block Actions
+        // Handling Dragging for Blocks
         const blocks = document.querySelectorAll('.block');
+        const playground = document.getElementById('playground');
 
         blocks.forEach(block => {
-            block.addEventListener('click', (e) => {
-                const action = e.target.dataset.action;
-                handleBlockAction(action);
+            block.addEventListener('mousedown', (e) => {
+                const newBlock = document.createElement('div');
+                newBlock.classList.add('block-in-playground');
+                newBlock.textContent = block.textContent;
+                newBlock.dataset.action = block.dataset.action;
+
+                newBlock.style.position = 'absolute';
+                newBlock.style.left = `${e.clientX - playground.offsetLeft}px`;
+                newBlock.style.top = `${e.clientY - playground.offsetTop}px`;
+                
+                playground.appendChild(newBlock);
+
+                newBlock.addEventListener('mousedown', startDrag);
+                newBlock.addEventListener('mouseup', stopDrag);
             });
         });
 
+        let draggedBlock = null;
+
+        function startDrag(e) {
+            draggedBlock = e.target;
+            const offsetX = e.clientX - draggedBlock.getBoundingClientRect().left;
+            const offsetY = e.clientY - draggedBlock.getBoundingClientRect().top;
+
+            function dragMove(e) {
+                draggedBlock.style.left = `${e.clientX - playground.offsetLeft - offsetX}px`;
+                draggedBlock.style.top = `${e.clientY - playground.offsetTop - offsetY}px`;
+            }
+
+            function stopDrag() {
+                document.removeEventListener('mousemove', dragMove);
+                draggedBlock.removeEventListener('mouseup', stopDrag);
+            }
+
+            document.addEventListener('mousemove', dragMove);
+            draggedBlock.addEventListener('mouseup', stopDrag);
+        }
+
+        // Green Flag Click - Execute the Blocks
+        const greenFlag = document.getElementById('green-flag');
+        greenFlag.addEventListener('click', () => {
+            const blocksInPlayground = document.querySelectorAll('.block-in-playground');
+            blocksInPlayground.forEach(block => {
+                handleBlockAction(block.dataset.action);
+            });
+        });
+
+        // Stop Button Click - Reset Sprite
+        const redButton = document.getElementById('red-button');
+        redButton.addEventListener('click', () => {
+            resetSprite();
+        });
+
+        // Handle Block Actions
         function handleBlockAction(action) {
             switch (action) {
                 case 'move':
@@ -117,30 +210,84 @@
                 case 'say':
                     spriteSay();
                     break;
+                case 'change-color':
+                    changeSpriteColor();
+                    break;
+                case 'wait':
+                    waitAction();
+                    break;
+                case 'hide':
+                    hideSprite();
+                    break;
+                case 'show':
+                    showSprite();
+                    break;
+                case 'go-to':
+                    goToPosition();
+                    break;
+                case 'play-sound':
+                    playSound();
+                    break;
                 default:
                     console.log('Unknown action');
             }
         }
 
-        // Move sprite function
+        // Block Actions Functions
         function moveSprite() {
             const currentX = parseInt(sprite.style.left);
             const currentY = parseInt(sprite.style.top);
             sprite.style.left = `${currentX + 50}px`; // Move sprite to the right
         }
 
-        // Turn sprite function
         function turnSprite() {
             const currentRotation = sprite.style.transform.replace(/[^\d.]/g, '');
             const newRotation = currentRotation ? parseInt(currentRotation) + 45 : 45;
             sprite.style.transform = `translate(-50%, -50%) rotate(${newRotation}deg)`;
         }
 
-        // Sprite says something function
         function spriteSay() {
             alert("Hello from the Sprite!");
         }
 
+        function changeSpriteColor() {
+            const currentColor = sprite.style.backgroundColor;
+            const newColor = currentColor === 'rgb(255, 99, 71)' ? '#3498db' : '#ff6347'; // Toggle between two colors
+            sprite.style.backgroundColor = newColor;
+        }
+
+        function waitAction() {
+            setTimeout(() => {
+                console.log("Waited for 1 second!");
+            }, 1000);
+        }
+
+        function hideSprite() {
+            sprite.style.display = 'none';
+        }
+
+        function showSprite() {
+            sprite.style.display = 'block';
+        }
+
+        function goToPosition() {
+            sprite.style.left = '200px';
+            sprite.style.top = '200px';
+        }
+
+        function playSound() {
+            const audio = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+            audio.play();
+        }
+
+        // Reset sprite to its original position
+        function resetSprite() {
+            sprite.style.left = '50%';
+            sprite.style.top = '50%';
+            sprite.style.transform = 'translate(-50%, -50%)';
+            sprite.style.backgroundColor = '#ff6347';
+            sprite.style.display = 'block';
+        }
     </script>
 
 </body>
