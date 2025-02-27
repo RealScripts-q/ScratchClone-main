@@ -89,6 +89,14 @@
             background-color: #fff;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+
+        .input-field {
+            margin: 5px;
+            padding: 5px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -106,7 +114,7 @@
             <div class="code-block" draggable="true" id="div">DIV</div>
             <div class="code-block" draggable="true" id="p">P</div>
             <div class="code-block" draggable="true" id="button">BUTTON</div>
-            <div class="code-block" draggable="true" id="img">IMG</div>
+            <div class="code-block" draggable="true" id="img">IMG (Image)</div>
             <div class="code-block" draggable="true" id="a">A (Link)</div>
             <div class="code-block" draggable="true" id="form">FORM</div>
             <div class="code-block" draggable="true" id="table">TABLE</div>
@@ -131,6 +139,10 @@
         <div class="playground" id="playground" ondrop="drop(event)" ondragover="allowDrop(event)">
             <h2>Your Playground</h2>
             <p>Drag and drop blocks here to build your webpage.</p>
+            <div id="starter-code">
+                <h3>Starter Code</h3>
+                <div>Welcome to the playground! Start building your website by dragging blocks from the left.</div>
+            </div>
         </div>
     </div>
 
@@ -156,6 +168,23 @@
             var draggedElement = document.getElementById(data);
             var newElement = document.createElement('div');
             newElement.textContent = draggedElement.textContent;
+
+            // Make it editable if it's a text-based element
+            if (draggedElement.id == 'img' || draggedElement.id == 'a' || draggedElement.id == 'p') {
+                newElement.setAttribute('contenteditable', 'true');
+            }
+
+            // Add attributes for interactive elements (like links and images)
+            if (draggedElement.id == 'img') {
+                newElement.innerHTML = '<img src="https://via.placeholder.com/150" alt="Image" class="input-field">';
+            }
+            if (draggedElement.id == 'a') {
+                newElement.innerHTML = '<a href="https://www.example.com" target="_blank" class="input-field">Visit Example</a>';
+            }
+            if (draggedElement.id == 'p') {
+                newElement.innerHTML = '<p>This is a paragraph added via drag-and-drop.</p>';
+            }
+
             newElement.setAttribute('class', 'dropped-element');
             event.target.appendChild(newElement);
         }
@@ -180,41 +209,19 @@
                 } else if (block.textContent == 'DIV') {
                     htmlContent += "<div>Drag and drop more code blocks!</div>";
                 } else if (block.textContent == 'P') {
-                    htmlContent += "<p>This is a paragraph added via drag-and-drop.</p>";
+                    htmlContent += "<p>" + block.innerHTML + "</p>";
                 } else if (block.textContent == 'BUTTON') {
                     htmlContent += "<button onclick='alert(\"Hello World!\")'>Click Me</button>";
-                } else if (block.textContent == 'IMG') {
-                    htmlContent += "<img src='https://via.placeholder.com/150' alt='Image'>";
+                } else if (block.textContent == 'IMG (Image)') {
+                    htmlContent += "<img src='" + block.querySelector('img').src + "' alt='Image'>";
                 } else if (block.textContent == 'A (Link)') {
-                    htmlContent += "<a href='https://www.example.com' target='_blank'>Visit Example</a>";
+                    htmlContent += "<a href='" + block.querySelector('a').href + "' target='_blank'>" + block.querySelector('a').textContent + "</a>";
                 } else if (block.textContent == 'FORM') {
                     htmlContent += "<form><label for='name'>Name:</label><input type='text' id='name' name='name'><input type='submit' value='Submit'></form>";
                 } else if (block.textContent == 'TABLE') {
                     htmlContent += "<table><tr><th>Header 1</th><th>Header 2</th></tr><tr><td>Data 1</td><td>Data 2</td></tr></table>";
                 } else if (block.textContent == 'UL/LI (List)') {
                     htmlContent += "<ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>";
-                } else if (block.textContent == 'Background Color') {
-                    htmlContent += "<style>body {background-color: lightblue;}</style>";
-                } else if (block.textContent == 'Font Size') {
-                    htmlContent += "<style>body {font-size: 18px;}</style>";
-                } else if (block.textContent == 'Text Color') {
-                    htmlContent += "<style>body {color: darkblue;}</style>";
-                } else if (block.textContent == 'Padding') {
-                    htmlContent += "<style>body {padding: 20px;}</style>";
-                } else if (block.textContent == 'Border') {
-                    htmlContent += "<style>body {border: 2px solid black;}</style>";
-                } else if (block.textContent == 'Margin') {
-                    htmlContent += "<style>body {margin: 20px;}</style>";
-                } else if (block.textContent == 'Display') {
-                    htmlContent += "<style>body {display: block;}</style>";
-                } else if (block.textContent == 'Alert') {
-                    htmlContent += "<script>alert('Hello! Welcome to the Playground!');</script>";
-                } else if (block.textContent == 'On Click Event') {
-                    htmlContent += "<button onclick='alert(\"You clicked the button!\")'>Click Me</button>";
-                } else if (block.textContent == 'Console Log') {
-                    htmlContent += "<script>console.log('This is a console log message');</script>";
-                } else if (block.textContent == 'Change Color') {
-                    htmlContent += "<button onclick='document.body.style.backgroundColor=\"green\";'>Change Background Color</button>";
                 }
             });
 
