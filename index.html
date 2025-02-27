@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Code Playground with Drag and Drop</title>
+    <title>Code Playground</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -39,7 +39,7 @@
 
         .code-block {
             padding: 10px;
-            margin: 10px 0;
+            margin: 5px;
             background-color: #f0f0f0;
             border: 1px solid #ddd;
             border-radius: 5px;
@@ -88,7 +88,7 @@
 </head>
 <body>
     <header>
-        <h1>Code Playground with Drag and Drop</h1>
+        <h1>Code Playground</h1>
     </header>
 
     <div class="container">
@@ -98,8 +98,20 @@
             <div class="code-block" draggable="true" id="html">HTML</div>
             <div class="code-block" draggable="true" id="head">HEAD</div>
             <div class="code-block" draggable="true" id="body">BODY</div>
+            <div class="code-block" draggable="true" id="h1">H1</div>
             <div class="code-block" draggable="true" id="p">P (Paragraph)</div>
-            <div class="code-block" draggable="true" id="text">Text</div>
+            <div class="code-block" draggable="true" id="img">IMG</div>
+            <div class="code-block" draggable="true" id="a">A (Link)</div>
+            <div class="code-block" draggable="true" id="button">BUTTON</div>
+
+            <h2>CSS Blocks</h2>
+            <div class="code-block" draggable="true" id="background-color">Background Color</div>
+            <div class="code-block" draggable="true" id="color">Text Color</div>
+            <div class="code-block" draggable="true" id="font-size">Font Size</div>
+
+            <h2>JavaScript Blocks</h2>
+            <div class="code-block" draggable="true" id="alert">Alert</div>
+            <div class="code-block" draggable="true" id="onclick">On Click Event</div>
         </div>
 
         <div class="playground" id="playground" ondrop="drop(event)" ondragover="allowDrop(event)">
@@ -108,8 +120,10 @@
             <div class="dropped-element">HTML</div>
             <div class="dropped-element">HEAD</div>
             <div class="dropped-element">BODY</div>
+            <div class="dropped-element">H1</div>
+            <div class="dropped-element">Welcome to your playground!</div>
             <div class="dropped-element">P (Paragraph)</div>
-            <div class="dropped-element">Welcome to your playground! Start building your website by dragging blocks from the left.</div>
+            <div class="dropped-element">Start building your website by dragging blocks from the left.</div>
         </div>
     </div>
 
@@ -117,7 +131,7 @@
 
     <div class="output" id="output">
         <h2>Output</h2>
-        <iframe id="outputFrame" style="width: 100%; height: 200px; border: none;"></iframe>
+        <iframe id="outputFrame" style="width: 100%; height: 300px; border: none;"></iframe>
     </div>
 
     <script>
@@ -146,7 +160,6 @@
 
             var htmlContent = "<!DOCTYPE html><html><head><title>Code Playground</title></head><body>";
 
-            // Loop through each block in the playground to generate HTML structure
             var blocks = playground.querySelectorAll('.dropped-element');
             blocks.forEach(function(block) {
                 if (block.textContent == 'DOCTYPE HTML') {
@@ -157,10 +170,10 @@
                     htmlContent += "<head><title>Code Playground</title></head>";
                 } else if (block.textContent == 'BODY') {
                     htmlContent += "<body>";
-                } else if (block.textContent == 'P (Paragraph)') {
-                    htmlContent += "<p>";
+                } else if (block.textContent == 'H1') {
+                    htmlContent += "<h1>";
                 } else {
-                    htmlContent += block.textContent + "</p>";
+                    htmlContent += block.textContent + "</h1>";
                 }
             });
 
@@ -171,7 +184,6 @@
             iframeDoc.close();
         }
 
-        // Make the code blocks draggable
         document.querySelectorAll('.code-block').forEach(function(block) {
             block.addEventListener('dragstart', drag);
         });
