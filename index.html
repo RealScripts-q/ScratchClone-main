@@ -11,113 +11,152 @@
             margin: 0;
             padding: 0;
             background-color: #f2f2f2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
         }
 
+        /* Header or Title */
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        /* Stage (Main Canvas for Sprite) */
         #stage {
-            width: 100%;
-            height: 300px;
+            width: 600px;
+            height: 400px;
             background-color: #add8e6;
             position: relative;
-            margin-top: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
         }
 
-        #sprite {
+        /* The Scratch Cat Sprite */
+        #cat {
             width: 50px;
             height: 50px;
-            background-color: #ff6347;
-            border-radius: 50%;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/a/a2/Scratch_Logo.svg');
+            background-size: contain;
+            background-repeat: no-repeat;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            transition: all 0.2s ease-in-out;
         }
 
+        /* Blocks Container */
         #blocks-container {
-            position: fixed;
-            top: 20px;
-            left: 20px;
+            width: 200px;
             background-color: #ffffff;
-            padding: 10px;
-            border-radius: 8px;
+            padding: 15px;
+            border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            min-width: 150px;
-            z-index: 10;
+            margin-bottom: 20px;
         }
 
         .block {
-            padding: 10px;
+            padding: 12px;
             background-color: #f39c12;
-            margin: 5px 0;
-            border-radius: 5px;
+            margin: 10px 0;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
             cursor: pointer;
+            transition: all 0.2s;
         }
 
         .block:hover {
             background-color: #e67e22;
+            transform: translateY(-3px);
         }
 
-        .draggable {
+        .block-in-playground {
+            background-color: #f39c12;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
             cursor: pointer;
+            transition: all 0.2s;
+            width: fit-content;
         }
 
+        .block-in-playground:hover {
+            background-color: #e67e22;
+            transform: translateY(-3px);
+        }
+
+        /* Playground Area (Where Blocks are Dropped) */
         #playground {
-            position: fixed;
-            top: 100px;
-            left: 160px;
-            width: 400px;
+            width: 600px;
             height: 300px;
             background-color: #ecf0f1;
             border: 2px dashed #7f8c8d;
-            padding: 10px;
-            overflow: auto;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            align-items: flex-start;
         }
 
+        /* Run Buttons Area */
         #run-buttons {
-            position: fixed;
-            top: 420px;
-            left: 160px;
+            display: flex;
+            gap: 15px;
         }
 
         #run-buttons button {
-            padding: 10px;
-            margin-right: 10px;
+            padding: 12px;
             font-size: 16px;
+            border-radius: 10px;
             cursor: pointer;
+            width: 120px;
         }
 
         #green-flag {
             background-color: #2ecc71;
             color: white;
             border: none;
-            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+        }
+
+        #green-flag:hover {
+            background-color: #27ae60;
         }
 
         #red-button {
             background-color: #e74c3c;
             color: white;
             border: none;
-            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
         }
 
-        .block-in-playground {
-            background-color: #f39c12;
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .block-in-playground:hover {
-            background-color: #e67e22;
+        #red-button:hover {
+            background-color: #c0392b;
         }
     </style>
 </head>
 <body>
 
+    <h1>Scratch Clone</h1>
+
+    <!-- Stage (Main Canvas for Sprite) -->
     <div id="stage">
-        <div id="sprite" class="draggable"></div>
+        <div id="cat" class="draggable"></div>
     </div>
 
+    <!-- Blocks Container -->
     <div id="blocks-container">
         <div class="block" data-action="move">Move</div>
         <div class="block" data-action="turn">Turn</div>
@@ -130,10 +169,12 @@
         <div class="block" data-action="play-sound">Play Sound</div>
     </div>
 
+    <!-- Playground Area (Where Blocks are Dropped) -->
     <div id="playground">
         <p><strong>Code Playground</strong></p>
     </div>
 
+    <!-- Run and Stop Buttons -->
     <div id="run-buttons">
         <button id="green-flag">Green Flag (Run)</button>
         <button id="red-button">Stop</button>
@@ -235,25 +276,25 @@
 
         // Block Actions Functions
         function moveSprite() {
-            const currentX = parseInt(sprite.style.left);
-            const currentY = parseInt(sprite.style.top);
-            sprite.style.left = `${currentX + 50}px`; // Move sprite to the right
+            const currentX = parseInt(cat.style.left);
+            const currentY = parseInt(cat.style.top);
+            cat.style.left = `${currentX + 50}px`; // Move sprite to the right
         }
 
         function turnSprite() {
-            const currentRotation = sprite.style.transform.replace(/[^\d.]/g, '');
+            const currentRotation = cat.style.transform.replace(/[^\d.]/g, '');
             const newRotation = currentRotation ? parseInt(currentRotation) + 45 : 45;
-            sprite.style.transform = `translate(-50%, -50%) rotate(${newRotation}deg)`;
+            cat.style.transform = `translate(-50%, -50%) rotate(${newRotation}deg)`;
         }
 
         function spriteSay() {
-            alert("Hello from the Sprite!");
+            alert("Meow! I'm the Scratch Cat!");
         }
 
         function changeSpriteColor() {
-            const currentColor = sprite.style.backgroundColor;
+            const currentColor = cat.style.backgroundColor;
             const newColor = currentColor === 'rgb(255, 99, 71)' ? '#3498db' : '#ff6347'; // Toggle between two colors
-            sprite.style.backgroundColor = newColor;
+            cat.style.backgroundColor = newColor;
         }
 
         function waitAction() {
@@ -263,16 +304,16 @@
         }
 
         function hideSprite() {
-            sprite.style.display = 'none';
+            cat.style.display = 'none';
         }
 
         function showSprite() {
-            sprite.style.display = 'block';
+            cat.style.display = 'block';
         }
 
         function goToPosition() {
-            sprite.style.left = '200px';
-            sprite.style.top = '200px';
+            cat.style.left = '200px';
+            cat.style.top = '200px';
         }
 
         function playSound() {
@@ -282,11 +323,11 @@
 
         // Reset sprite to its original position
         function resetSprite() {
-            sprite.style.left = '50%';
-            sprite.style.top = '50%';
-            sprite.style.transform = 'translate(-50%, -50%)';
-            sprite.style.backgroundColor = '#ff6347';
-            sprite.style.display = 'block';
+            cat.style.left = '50%';
+            cat.style.top = '50%';
+            cat.style.transform = 'translate(-50%, -50%)';
+            cat.style.backgroundColor = '#ff6347';
+            cat.style.display = 'block';
         }
     </script>
 
