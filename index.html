@@ -27,7 +27,7 @@
         }
 
         .code-blocks {
-            width: 20%;
+            width: 30%;
             background-color: #fff;
             padding: 10px;
             border: 2px solid #ddd;
@@ -47,7 +47,7 @@
         }
 
         .playground {
-            width: 70%;
+            width: 60%;
             background-color: #fff;
             border: 2px solid #ddd;
             border-radius: 5px;
@@ -111,6 +111,21 @@
             <div class="code-block" draggable="true" id="form">FORM</div>
             <div class="code-block" draggable="true" id="table">TABLE</div>
             <div class="code-block" draggable="true" id="list">UL/LI (List)</div>
+
+            <h2>CSS Blocks</h2>
+            <div class="code-block" draggable="true" id="background-color">Background Color</div>
+            <div class="code-block" draggable="true" id="font-size">Font Size</div>
+            <div class="code-block" draggable="true" id="color">Text Color</div>
+            <div class="code-block" draggable="true" id="padding">Padding</div>
+            <div class="code-block" draggable="true" id="border">Border</div>
+            <div class="code-block" draggable="true" id="margin">Margin</div>
+            <div class="code-block" draggable="true" id="display">Display</div>
+
+            <h2>JavaScript Blocks</h2>
+            <div class="code-block" draggable="true" id="alert">Alert</div>
+            <div class="code-block" draggable="true" id="onclick">On Click Event</div>
+            <div class="code-block" draggable="true" id="console-log">Console Log</div>
+            <div class="code-block" draggable="true" id="change-color">Change Color</div>
         </div>
 
         <div class="playground" id="playground" ondrop="drop(event)" ondragover="allowDrop(event)">
@@ -150,7 +165,8 @@
             var outputFrame = document.getElementById("outputFrame");
             var iframeDoc = outputFrame.contentDocument || outputFrame.contentWindow.document;
 
-            var htmlContent = "<!DOCTYPE html><html><head><title>Code Playground</title></head><body>";
+            var htmlContent = "<!DOCTYPE html><html><head><title>Code Playground</title>";
+
             var blocks = playground.querySelectorAll('.dropped-element');
             blocks.forEach(function(block) {
                 if (block.textContent == 'DOCTYPE HTML') {
@@ -177,8 +193,31 @@
                     htmlContent += "<table><tr><th>Header 1</th><th>Header 2</th></tr><tr><td>Data 1</td><td>Data 2</td></tr></table>";
                 } else if (block.textContent == 'UL/LI (List)') {
                     htmlContent += "<ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>";
+                } else if (block.textContent == 'Background Color') {
+                    htmlContent += "<style>body {background-color: lightblue;}</style>";
+                } else if (block.textContent == 'Font Size') {
+                    htmlContent += "<style>body {font-size: 18px;}</style>";
+                } else if (block.textContent == 'Text Color') {
+                    htmlContent += "<style>body {color: darkblue;}</style>";
+                } else if (block.textContent == 'Padding') {
+                    htmlContent += "<style>body {padding: 20px;}</style>";
+                } else if (block.textContent == 'Border') {
+                    htmlContent += "<style>body {border: 2px solid black;}</style>";
+                } else if (block.textContent == 'Margin') {
+                    htmlContent += "<style>body {margin: 20px;}</style>";
+                } else if (block.textContent == 'Display') {
+                    htmlContent += "<style>body {display: block;}</style>";
+                } else if (block.textContent == 'Alert') {
+                    htmlContent += "<script>alert('Hello! Welcome to the Playground!');</script>";
+                } else if (block.textContent == 'On Click Event') {
+                    htmlContent += "<button onclick='alert(\"You clicked the button!\")'>Click Me</button>";
+                } else if (block.textContent == 'Console Log') {
+                    htmlContent += "<script>console.log('This is a console log message');</script>";
+                } else if (block.textContent == 'Change Color') {
+                    htmlContent += "<button onclick='document.body.style.backgroundColor=\"green\";'>Change Background Color</button>";
                 }
             });
+
             htmlContent += "</body></html>";
 
             iframeDoc.open();
