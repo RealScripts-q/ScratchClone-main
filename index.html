@@ -144,6 +144,7 @@
     <div class="chat-options" id="chatOptionsSection" style="display:none;">
       <button onclick="showCreateChatSection()">Create a New Chat</button>
       <button onclick="showPublicChats()">Join an Existing Chat</button>
+      <button onclick="logout()">Logout</button>
     </div>
 
     <!-- Create a new chat section -->
@@ -187,9 +188,18 @@
     // Set the user's name and load the chat options
     function setName() {
       const userName = document.getElementById("userName").value.trim();
+      
       if (userName !== "") {
-        localStorage.setItem("userName", userName);
-        loadChatOptions();
+        // Check if the name already exists in any chat's messages
+        const chats = JSON.parse(localStorage.getItem("chats")) || [];
+        const nameExists = chats.some(chat => chat.messages.some(msg => msg.user === userName));
+        
+        if (nameExists) {
+          alert("Name already in use. Please choose a different name.");
+        } else {
+          localStorage.setItem("userName", userName);
+          loadChatOptions();
+        }
       } else {
         alert("Please enter a valid name.");
       }
@@ -240,7 +250,8 @@
 
       if (chatName !== "") {
         const chats = JSON.parse(localStorage.getItem("chats")) || [];
-        chats.push({ name: chatName, visibility: visibility, messages: [] });
+        const newChat = { name: chatName, visibility: visibility, messages: [] };
+        chats.push(newChat);
         localStorage.setItem("chats", JSON.stringify(chats));
         alert(`Chat "${chatName}" created successfully!`);
         showPublicChats();
@@ -300,6 +311,16 @@
           messageInput.value = "";
         }
       }
+    }
+
+    // Logout the user
+    function logout() {
+      localStorage.removeItem("userName");
+      document.getElementById("chatSection").style.display = "none";
+      document.getElementById("nameInputSection").style.display = "flex";
+      document.getElementById("chatOptionsSection").style.display = "none";
+      document.getElementById("createChatSection").style.display = "none";
+      document.getElementById("chatListSection").style.display = "none";
     }
   </script>
 </body>
