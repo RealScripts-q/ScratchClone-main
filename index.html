@@ -125,6 +125,7 @@
       <button onclick="clearChatForEveryone()">Clear Chat (Everyone)</button>
       <button onclick="clearChatForSelf()">Clear Chat (Only Me)</button>
       <button id="banButton" onclick="banUser()" style="display:none;">Ban User</button>
+      <button id="deleteMessagesButton" onclick="deleteMessagesFromUser()" style="display:none;">Delete All Messages from User</button>
     </div>
     <div id="messages" class="messages"></div>
     <input type="text" id="messageInput" placeholder="Type a message..." />
@@ -159,6 +160,7 @@ let currentChatOwner = "";
 function checkIfRealYoutuberQ() {
   if (userEmail === "realgyjs@gmail.com") {
     document.getElementById("banButton").style.display = "inline-block";
+    document.getElementById("deleteMessagesButton").style.display = "inline-block";
   }
 }
 
@@ -320,6 +322,27 @@ function banUser() {
     });
   } else {
     alert("Invalid username or you cannot ban yourself.");
+  }
+}
+
+// Delete all messages from a specific user
+function deleteMessagesFromUser() {
+  const userToDelete = prompt("Enter the username of the user whose messages you want to delete:");
+
+  if (userToDelete) {
+    const chatRef = db.ref('chats/' + currentChat + '/messages');
+    chatRef.once('value', snapshot => {
+      const messages = snapshot.val();
+      if (messages) {
+        for (const messageId in messages) {
+          const message = messages[messageId];
+          if (message.sender === userToDelete) {
+            chatRef.child(messageId).remove();
+          }
+        }
+        alert(`All messages from ${userToDelete} have been deleted.`);
+      }
+    });
   }
 }
 
