@@ -39,6 +39,17 @@
     .message.received {
       text-align: left;
     }
+    .chat-list {
+      margin-top: 20px;
+    }
+    .chat-item {
+      padding: 10px;
+      border: 1px solid #ddd;
+      margin-bottom: 5px;
+      cursor: pointer;
+      border-radius: 5px;
+      background-color: #eaeaea;
+    }
   </style>
 </head>
 <body>
@@ -52,17 +63,27 @@
       <button onclick="setUserName()">Start Chat</button>
     </div>
 
+    <!-- Chat List Section -->
+    <div id="chatListSection" style="display:none;">
+      <h3>Select a Chat or Create One</h3>
+      <div id="chatList" class="chat-list"></div>
+      <input type="text" id="newChatName" placeholder="Enter new chat name (optional)" />
+      <button onclick="createChat()">Create New Chat</button>
+    </div>
+
     <!-- Chat Section -->
     <div id="chatSection" style="display:none;">
+      <h3>Chat: <span id="currentChatName"></span></h3>
       <div id="chatBox"></div>
       <input type="text" id="messageInput" placeholder="Type a message..." />
       <button onclick="sendMessage()">Send</button>
+      <button onclick="logout()">Logout</button>
     </div>
   </div>
 
   <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <script>
     // Firebase Configuration (use your actual Firebase config here)
@@ -77,79 +98,134 @@
     };
 
     // Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.database(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
     // Global variables
     let userName = "";
+    let currentChat = null;
     const chatBox = document.getElementById("chatBox");
     const messageInput = document.getElementById("messageInput");
 
-    // Set username and show chat
+    // Set username and show chat options
     function setUserName() {
       userName = document.getElementById("userName").value;
       if (userName.trim() !== "") {
         localStorage.setItem("userName", userName);
         document.getElementById("nameSection").style.display = "none";
-        document.getElementById("chatSection").style.display = "block";
-        startChat();
+        document.getElementById("chatListSection").style.display = "block";
+        loadChatList();
       } else {
         alert("Please enter a valid name.");
       }
     }
 
-    // Start the chat and listen for new messages
-    function startChat() {
-      loadMessages();
-      listenForMessages();
+    // Load chat list from Firebase
+    function loadChatList() {
+      const chatListRef = db.ref('chats');
+      chatListRef.on('value', snapshot => {
+        const chats = snapshot.val();
+        const chatList = document.getElementById("chatList");
+        chatList.innerHTML = ""; // Clear the chat list
+
+        if (chats) {
+          for (const key in chats) {
+            if (chats.hasOwnProperty(key)) {
+              const chat = chats[key];
+              const chatDiv = document.createElement("div");
+              chatDiv.classList.add("chat-item");
+              chatDiv.textContent = chat.name;
+              chatDiv.onclick = () => joinChat(key, chat.name);
+              chatList.appendChild(chatDiv);
+            }
+          }
+        }
+      });
     }
 
-    // Load chat messages from Firebase Realtime Database
-    function loadMessages() {
-      const chatRef = db.ref('chatMessages');
+    // Join an existing chat
+    function joinChat(chatId, chatName) {
+      currentChat = chatId;
+      document.getElementById("currentChatName").textContent = chatName;
+      document.getElementById("chatListSection").style.display = "none";
+      document.getElementById("chatSection").style.display = "block";
+      loadMessages(chatId);
+    }
+
+    // Create a new public chat
+    function createChat() {
+      const newChatName = document.getElementById("newChatName").value.trim();
+      if (newChatName !== "") {
+        const chatListRef = db.ref('chats');
+        chatListRef.push({
+          name: newChatName
+        }).then(() => {
+          alert("New chat created!");
+          loadChatList();
+        }).catch(error => {
+          console.error("Error creating chat:", error);
+        });
+      } else {
+        alert("Please enter a valid chat name.");
+      }
+    }
+
+    // Load messages from Firebase for a specific chat
+    function loadMessages(chatId) {
+      const chatRef = db.ref('chats/' + chatId + '/messages');
       chatRef.on('value', snapshot => {
         const messages = snapshot.val();
         chatBox.innerHTML = ""; // Clear the chat box
 
-        for (const key in messages) {
-          if (messages.hasOwnProperty(key)) {
-            const msg = messages[key];
-            const messageDiv = document.createElement("div");
-            messageDiv.classList.add("message", msg.user === userName ? "sent" : "received");
-            messageDiv.innerHTML = `<strong>${msg.user}:</strong> ${msg.content}`;
-            chatBox.appendChild(messageDiv);
+        if (messages) {
+          for (const key in messages) {
+            if (messages.hasOwnProperty(key)) {
+              const msg = messages[key];
+              const messageDiv = document.createElement("div");
+              messageDiv.classList.add("message", msg.user === userName ? "sent" : "received");
+              messageDiv.innerHTML = `<strong>${msg.user}:</strong> ${msg.content}`;
+              chatBox.appendChild(messageDiv);
+            }
           }
         }
         chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the latest message
       });
     }
 
-    // Listen for new messages in real-time
-    function listenForMessages() {
-      const chatRef = db.ref('chatMessages');
-      chatRef.on('child_added', (data) => {
-        const msg = data.val();
-        const messageDiv = document.createElement("div");
-        messageDiv.classList.add("message", msg.user === userName ? "sent" : "received");
-        messageDiv.innerHTML = `<strong>${msg.user}:</strong> ${msg.content}`;
-        chatBox.appendChild(messageDiv);
-        chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the latest message
-      });
-    }
-
-    // Send message to Firebase Realtime Database
+    // Send message to the selected chat
     function sendMessage() {
       const message = messageInput.value.trim();
-      if (message !== "") {
-        const chatRef = db.ref('chatMessages');
+      if (message !== "" && currentChat !== null) {
+        const chatRef = db.ref('chats/' + currentChat + '/messages');
         chatRef.push({
           user: userName,
           content: message
         }).then(() => {
           messageInput.value = ""; // Clear input after sending message
         }).catch(error => {
-          console.error("Error sending message: ", error);
+          console.error("Error sending message:", error);
         });
+      }
+    }
+
+    // Logout and show the name input again
+    function logout() {
+      userName = "";
+      currentChat = null;
+      document.getElementById("chatSection").style.display = "none";
+      document.getElementById("nameSection").style.display = "block";
+      document.getElementById("newChatName").value = "";
+      document.getElementById("chatListSection").style.display = "none";
+    }
+
+    // Check if user is already logged in
+    window.onload = () => {
+      const storedUserName = localStorage.getItem("userName");
+      if (storedUserName) {
+        userName = storedUserName;
+        document.getElementById("nameSection").style.display = "none";
+        document.getElementById("chatListSection").style.display = "block";
+        loadChatList();
       }
     }
   </script>
