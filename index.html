@@ -132,7 +132,7 @@
   </div>
 
   <script>
-    // Load the username from localStorage, if available
+    // Check if the user has a name saved in localStorage
     if (localStorage.getItem("userName")) {
       loadChat();
     } else {
@@ -151,7 +151,7 @@
       }
     }
 
-    // Load the chat messages
+    // Load the chat messages and display them
     function loadChat() {
       const userName = localStorage.getItem("userName");
       document.getElementById("nameInputSection").style.display = "none";
@@ -163,6 +163,7 @@
       const messages = JSON.parse(localStorage.getItem("messages")) || [];
       const chatBox = document.getElementById("chatBox");
 
+      // Display messages
       messages.forEach(msg => {
         displayMessage(msg.content, msg.type, msg.user);
       });
