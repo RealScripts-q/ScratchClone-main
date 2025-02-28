@@ -106,6 +106,7 @@
 <div id="nameSection">
   <h2>Enter Your Name</h2>
   <input type="text" id="userName" placeholder="Enter your name" />
+  <input type="email" id="userEmail" placeholder="Enter your email" />
   <button onclick="setUserName()">Start Chat</button>
 </div>
 
@@ -123,7 +124,6 @@
       <button onclick="logout()">Logout</button>
       <button onclick="clearChatForEveryone()">Clear Chat (Everyone)</button>
       <button onclick="clearChatForSelf()">Clear Chat (Only Me)</button>
-      <!-- Ban button only visible for "INCONITO" -->
       <button id="banButton" onclick="banUser()" style="display:none;">Ban User</button>
     </div>
     <div id="messages" class="messages"></div>
@@ -134,6 +134,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 
 <script>
 // Firebase Configuration
@@ -149,59 +150,76 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const auth = firebase.auth();
 
 let userName = "";
+let userEmail = "";
 let currentChat = null;
 let currentChatOwner = "";
 
-// On page load, check if the user has a saved name in localStorage
-window.onload = function() {
-  const savedUserName = localStorage.getItem("userName");
-  if (savedUserName) {
-    userName = savedUserName;
-    document.getElementById("nameSection").style.display = "none";
-    document.getElementById("chatSection").style.display = "flex";
-    loadContacts();
-    checkIfInconito(); // Check if the user is "INCONITO"
-  }
-};
-
-// Check if user is "INCONITO" and show the "Ban User" button accordingly
-function checkIfInconito() {
-  if (userName === "INCONITO") {
+// Check if user is "RealYoutuber_Q" and show the "Ban User" button accordingly
+function checkIfRealYoutuber_Q() {
+  if (userName === "RealYoutuber_Q") {
     document.getElementById("banButton").style.display = "inline-block";
   }
 }
 
-// Set username and display chat section
+// Set username and email, display chat section and recovery system
 function setUserName() {
   userName = document.getElementById("userName").value.trim();
-  if (userName) {
+  userEmail = document.getElementById("userEmail").value.trim();
+
+  if (userName && userEmail) {
     checkIfNameExists(userName).then(exists => {
       if (exists) {
-        alert("This name is already taken. Please choose another name.");
+        checkEmailForExistingUser(userEmail).then(emailExists => {
+          if (emailExists) {
+            alert("We've sent a verification email. Please verify your identity.");
+            // Implement email verification logic (e.g., Firebase Auth)
+            loginUserWithEmail(userEmail);
+          } else {
+            alert("This name is already taken by another user. Please choose another name.");
+          }
+        });
       } else {
-        db.ref('users').child(userName).set(true);
-        localStorage.setItem("userName", userName);  // Save the username in localStorage
+        db.ref('users').child(userName).set({ email: userEmail });
+        localStorage.setItem("userName", userName);
         document.getElementById("nameSection").style.display = "none";
         document.getElementById("chatSection").style.display = "flex";
         loadContacts();
-        checkIfInconito(); // Check if the user is "INCONITO"
+        checkIfRealYoutuber_Q();
       }
     });
   } else {
-    alert("Please enter a valid name.");
+    alert("Please enter a valid name and email.");
   }
 }
 
-// Check if the name already exists in Firebase
+// Check if name exists in Firebase
 function checkIfNameExists(name) {
   return db.ref('users/' + name).once('value').then(snapshot => {
     return snapshot.exists();
   });
 }
 
-// Load contacts
+// Check if email exists for the given user
+function checkEmailForExistingUser(email) {
+  return db.ref('users').orderByChild('email').equalTo(email).once('value').then(snapshot => {
+    return snapshot.exists();
+  });
+}
+
+// Email login system for verification
+function loginUserWithEmail(email) {
+  auth.sendPasswordResetEmail(email).then(() => {
+    alert("Check your email for the verification link.");
+  }).catch((error) => {
+    console.error(error);
+    alert("Error: " + error.message);
+  });
+}
+
+// Load contacts from Firebase
 function loadContacts() {
   const contactsRef = db.ref('chats');
   contactsRef.on('value', snapshot => {
@@ -239,7 +257,7 @@ function openChat(chatId, chatName, owner) {
   });
 }
 
-// Load messages
+// Load messages from Firebase
 function loadMessages(chatId) {
   const messagesRef = db.ref('chats/' + chatId + '/messages');
   messagesRef.on('value', snapshot => {
@@ -258,7 +276,7 @@ function loadMessages(chatId) {
   });
 }
 
-// Send a message
+// Send a message to Firebase
 function sendMessage() {
   const messageInput = document.getElementById("messageInput");
   const messageText = messageInput.value.trim();
@@ -273,27 +291,19 @@ function sendMessage() {
   }
 }
 
-// Ban user
+// Ban user from chat
 function banUser() {
   const bannedUser = prompt("Enter the username of the user to ban:");
-
   if (bannedUser && bannedUser !== userName) {
     const chatRef = db.ref('chats/' + currentChat);
     chatRef.once('value', snapshot => {
       const chatData = snapshot.val();
-      if (chatData) {
-        if (chatData.owner === userName) {
-          const updatedMembers = chatData.members.filter(member => member !== bannedUser);
-          chatRef.update({ members: updatedMembers });
-          alert(`${bannedUser} has been banned from the chat.`);
-
-          if (currentChat && chatData.members.includes(bannedUser)) {
-            alert("You have been banned from this chat.");
-            logout();
-          }
-        } else {
-          alert("Only the chat owner can ban users.");
-        }
+      if (chatData && chatData.owner === userName) {
+        const updatedMembers = chatData.members.filter(member => member !== bannedUser);
+        chatRef.update({ members: updatedMembers });
+        alert(`${bannedUser} has been banned from the chat.`);
+      } else {
+        alert("Only the chat owner can ban users.");
       }
     });
   } else {
@@ -301,7 +311,7 @@ function banUser() {
   }
 }
 
-// Logout
+// Logout and clear local storage
 function logout() {
   localStorage.removeItem("userName");
   window.location.reload();
