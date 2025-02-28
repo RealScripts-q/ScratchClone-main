@@ -325,6 +325,34 @@ function banUser() {
   }
 }
 
+// Automatically delete messages of banned users every second
+function autoDeleteBannedMessages() {
+  setInterval(() => {
+    if (currentChat) {
+      const chatRef = db.ref('chats/' + currentChat);
+      chatRef.once('value', snapshot => {
+        const chatData = snapshot.val();
+        if (chatData && chatData.members) {
+          chatData.members.forEach(member => {
+            const messagesRef = db.ref('chats/' + currentChat + '/messages');
+            messagesRef.once('value', snapshot => {
+              const messages = snapshot.val();
+              if (messages) {
+                for (const messageId in messages) {
+                  const message = messages[messageId];
+                  if (message.sender === member && (member === "banned_user_name")) {
+                    messagesRef.child(messageId).remove();
+                  }
+                }
+              }
+            });
+          });
+        }
+      });
+    }
+  }, 1000); // Delete every second
+}
+
 // Delete all messages from a specific user
 function deleteMessagesFromUser() {
   const userToDelete = prompt("Enter the username of the user whose messages you want to delete:");
@@ -352,6 +380,9 @@ function logout() {
   localStorage.removeItem("userEmail");
   window.location.reload();
 }
+
+// Start auto-delete for banned users
+autoDeleteBannedMessages();
 </script>
 
 </body>
