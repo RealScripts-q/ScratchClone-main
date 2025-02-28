@@ -5,125 +5,99 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WhatsApp-like Chat</title>
   <style>
+    /* Basic styling for the chat application */
     body {
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      background-color: #e5ddd5;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
       margin: 0;
-      padding: 0;
+      background-color: #f4f4f9;
     }
+
     .chat-container {
       display: flex;
-      height: 100vh;
+      width: 80%;
+      height: 80%;
+      border-radius: 10px;
+      overflow: hidden;
+      background-color: white;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
+
     .contact-list {
-      width: 300px;
-      background-color: #ffffff;
-      border-right: 1px solid #ddd;
+      width: 30%;
+      background-color: #f0f0f0;
       padding: 20px;
-      overflow-y: scroll;
+      box-sizing: border-box;
+      overflow-y: auto;
+      border-right: 1px solid #ddd;
     }
+
     .contact-item {
-      padding: 12px 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+      background-color: #e0e0e0;
       cursor: pointer;
-      border-bottom: 1px solid #ddd;
-      font-size: 14px;
+      border-radius: 5px;
     }
+
     .contact-item:hover {
-      background-color: #f1f1f1;
+      background-color: #ccc;
     }
+
     .chat-box {
-      flex-grow: 1;
-      background-color: #fff;
-      padding: 15px;
+      width: 70%;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      height: 100%;
+      padding: 20px;
+      box-sizing: border-box;
     }
+
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #ddd;
+      margin-bottom: 10px;
     }
-    #chatName {
-      font-size: 18px;
-      font-weight: bold;
-      color: #075e54;
-    }
-    button {
-      padding: 8px 12px;
-      font-size: 14px;
-      border-radius: 5px;
-      background-color: #25D366;
+
+    .header button {
+      background-color: #007BFF;
       color: white;
       border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
       cursor: pointer;
     }
-    button:hover {
-      background-color: #128C7E;
-    }
-    #messages {
+
+    .messages {
       flex-grow: 1;
-      overflow-y: scroll;
-      padding: 10px 0;
+      overflow-y: auto;
       margin-bottom: 10px;
     }
+
     .message {
-      padding: 8px 12px;
-      margin-bottom: 10px;
-      border-radius: 18px;
-      font-size: 14px;
-      max-width: 70%;
-      word-wrap: break-word;
-    }
-    .message.sent {
-      background-color: #25D366;
-      color: white;
-      align-self: flex-end;
-    }
-    .message.received {
-      background-color: #f1f1f1;
-      align-self: flex-start;
-    }
-    #messageInput {
       padding: 10px;
-      width: calc(100% - 80px);
-      font-size: 14px;
-      border-radius: 18px;
+      background-color: #f1f1f1;
+      border-radius: 5px;
+      margin-bottom: 5px;
+    }
+
+    input[type="text"] {
+      padding: 10px;
       border: 1px solid #ddd;
+      border-radius: 5px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    button {
       margin-top: 10px;
     }
-    .contact-list h3 {
-      font-size: 16px;
-      font-weight: bold;
-      color: #075e54;
-      margin-bottom: 15px;
-    }
+
     #nameSection {
-      padding: 20px;
       text-align: center;
-    }
-    #nameSection input {
-      padding: 12px;
-      font-size: 14px;
-      border-radius: 18px;
-      border: 1px solid #ddd;
-      margin-bottom: 15px;
-      width: 80%;
-    }
-    #nameSection button {
-      background-color: #25D366;
-      color: white;
-      padding: 12px 20px;
-      font-size: 16px;
-      border-radius: 18px;
-      border: none;
-      cursor: pointer;
-    }
-    #nameSection button:hover {
-      background-color: #128C7E;
     }
   </style>
 </head>
@@ -149,6 +123,8 @@
       <button onclick="logout()">Logout</button>
       <button onclick="clearChatForEveryone()">Clear Chat (Everyone)</button>
       <button onclick="clearChatForSelf()">Clear Chat (Only Me)</button>
+      <!-- Ban button only visible for "INCONITO" -->
+      <button id="banButton" onclick="banUser()" style="display:none;">Ban User</button>
     </div>
     <div id="messages" class="messages"></div>
     <input type="text" id="messageInput" placeholder="Type a message..." />
@@ -171,25 +147,30 @@ const firebaseConfig = {
   appId: "1:598300946052:web:7eed3b96d89933b1159cd1"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let userName = "";
 let currentChat = null;
 let currentChatOwner = "";
-let isMuted = false;
-let muteEndTime = 0;  // Timestamp to check if the user is muted
 
-// List of prohibited words (example, you can expand this list)
-const prohibitedWords = ["badword1", "badword2", "curse1", "curse2"]; 
+// On page load, check if the user has a saved name in localStorage
+window.onload = function() {
+  const savedUserName = localStorage.getItem("userName");
+  if (savedUserName) {
+    userName = savedUserName;
+    document.getElementById("nameSection").style.display = "none";
+    document.getElementById("chatSection").style.display = "flex";
+    loadContacts();
+    checkIfInconito(); // Check if the user is "INCONITO"
+  }
+};
 
-// Check if the name exists in localStorage or set it
-if (localStorage.getItem("userName")) {
-  userName = localStorage.getItem("userName");
-  document.getElementById("nameSection").style.display = "none";
-  document.getElementById("chatSection").style.display = "flex";
-  loadContacts();
+// Check if user is "INCONITO" and show the "Ban User" button accordingly
+function checkIfInconito() {
+  if (userName === "INCONITO") {
+    document.getElementById("banButton").style.display = "inline-block";
+  }
 }
 
 // Set username and display chat section
@@ -200,12 +181,12 @@ function setUserName() {
       if (exists) {
         alert("This name is already taken. Please choose another name.");
       } else {
-        // Save the name to Firebase and localStorage
         db.ref('users').child(userName).set(true);
-        localStorage.setItem("userName", userName);
+        localStorage.setItem("userName", userName);  // Save the username in localStorage
         document.getElementById("nameSection").style.display = "none";
         document.getElementById("chatSection").style.display = "flex";
         loadContacts();
+        checkIfInconito(); // Check if the user is "INCONITO"
       }
     });
   } else {
@@ -220,7 +201,7 @@ function checkIfNameExists(name) {
   });
 }
 
-// Load contacts (chats) from Firebase
+// Load contacts
 function loadContacts() {
   const contactsRef = db.ref('chats');
   contactsRef.on('value', snapshot => {
@@ -240,35 +221,25 @@ function loadContacts() {
   });
 }
 
-// Create a new chat (public or private)
-function createNewChat() {
-  const chatName = prompt("Enter chat name:");
-  const isPrivate = confirm("Is this a private chat?");
-
-  const newChatRef = db.ref('chats').push();
-  const chatData = {
-    name: chatName,
-    owner: userName,
-    isPrivate: isPrivate,
-    members: isPrivate ? [userName] : [], // If private, start with only the owner
-    messages: {}
-  };
-
-  newChatRef.set(chatData).then(() => {
-    alert("New chat created!");
-    loadContacts();
+// Open a chat and display messages
+function openChat(chatId, chatName, owner) {
+  const chatRef = db.ref('chats/' + chatId);
+  chatRef.once('value', snapshot => {
+    const chatData = snapshot.val();
+    if (chatData) {
+      if (chatData.members && !chatData.members.includes(userName)) {
+        alert("You have been banned from this chat.");
+        return;
+      }
+      currentChat = chatId;
+      currentChatOwner = owner;
+      document.getElementById("chatName").textContent = chatName;
+      loadMessages(chatId);
+    }
   });
 }
 
-// Open a chat and display messages
-function openChat(chatId, chatName, owner) {
-  currentChat = chatId;
-  currentChatOwner = owner;
-  document.getElementById("chatName").textContent = chatName;
-  loadMessages(chatId);
-}
-
-// Load messages for the selected chat
+// Load messages
 function loadMessages(chatId) {
   const messagesRef = db.ref('chats/' + chatId + '/messages');
   messagesRef.on('value', snapshot => {
@@ -276,104 +247,64 @@ function loadMessages(chatId) {
     const messagesContainer = document.getElementById("messages");
     messagesContainer.innerHTML = "";
     if (messages) {
-      for (const msgId in messages) {
-        const msg = messages[msgId];
+      for (const messageId in messages) {
+        const message = messages[messageId];
         const messageDiv = document.createElement("div");
-        messageDiv.classList.add("message", msg.user === userName ? "sent" : "received");
-        messageDiv.textContent = `${msg.user}: ${msg.content}`;
+        messageDiv.classList.add("message");
+        messageDiv.textContent = message.text;
         messagesContainer.appendChild(messageDiv);
       }
     }
-    messagesContainer.scrollTop = messagesContainer.scrollHeight; // Scroll to the bottom
   });
 }
 
-// Send a message to the selected chat
+// Send a message
 function sendMessage() {
-  const messageContent = document.getElementById("messageInput").value.trim();
-
-  // Check if the user is muted
-  if (isMuted && Date.now() < muteEndTime) {
-    alert("You are muted for 1 hour due to inappropriate language.");
-    return;
-  }
-
-  if (messageContent && currentChat) {
-    // Check for curse words
-    if (containsCurseWords(messageContent)) {
-      muteUserForAnHour();
-      alert("You have been muted for 1 hour due to inappropriate language.");
-      return;
-    }
-
-    const messagesRef = db.ref('chats/' + currentChat + '/messages');
-    // Add a new message to the chat
-    messagesRef.push({
-      user: userName,
-      content: messageContent
+  const messageInput = document.getElementById("messageInput");
+  const messageText = messageInput.value.trim();
+  if (messageText && currentChat) {
+    const messageRef = db.ref('chats/' + currentChat + '/messages');
+    messageRef.push({
+      text: messageText,
+      sender: userName,
+      timestamp: Date.now()
     });
-    document.getElementById("messageInput").value = "";
+    messageInput.value = "";
   }
 }
 
-// Check if message contains any prohibited words
-function containsCurseWords(message) {
-  return prohibitedWords.some(word => message.toLowerCase().includes(word));
-}
+// Ban user
+function banUser() {
+  const bannedUser = prompt("Enter the username of the user to ban:");
 
-// Mute user for 1 hour
-function muteUserForAnHour() {
-  isMuted = true;
-  muteEndTime = Date.now() + 60 * 60 * 1000; // Mute for 1 hour
-}
+  if (bannedUser && bannedUser !== userName) {
+    const chatRef = db.ref('chats/' + currentChat);
+    chatRef.once('value', snapshot => {
+      const chatData = snapshot.val();
+      if (chatData) {
+        if (chatData.owner === userName) {
+          const updatedMembers = chatData.members.filter(member => member !== bannedUser);
+          chatRef.update({ members: updatedMembers });
+          alert(`${bannedUser} has been banned from the chat.`);
 
-// Clear chat for only the current user
-function clearChatForSelf() {
-  if (currentChat) {
-    const messagesRef = db.ref('chats/' + currentChat + '/messages');
-    messagesRef.once('value').then(snapshot => {
-      const messages = snapshot.val();
-      for (const msgId in messages) {
-        if (messages[msgId].user === userName) {
-          db.ref('chats/' + currentChat + '/messages/' + msgId).remove();
+          if (currentChat && chatData.members.includes(bannedUser)) {
+            alert("You have been banned from this chat.");
+            logout();
+          }
+        } else {
+          alert("Only the chat owner can ban users.");
         }
       }
     });
+  } else {
+    alert("Invalid username or you cannot ban yourself.");
   }
 }
 
-// Clear chat for everyone (if owner)
-function clearChatForEveryone() {
-  if (currentChat && currentChatOwner === userName) {
-    const messagesRef = db.ref('chats/' + currentChat + '/messages');
-    messagesRef.remove();
-  }
-}
-
-// Clear all chats
-function clearAllChats() {
-  if (confirm("Are you sure you want to clear all chats? This cannot be undone.")) {
-    db.ref('chats').remove();
-    alert("All chats have been cleared.");
-  }
-}
-
-// Clear all contacts (users)
-function clearAllContacts() {
-  if (confirm("Are you sure you want to clear all contacts? This cannot be undone.")) {
-    db.ref('users').remove();
-    alert("All contacts have been cleared.");
-  }
-}
-
-// Logout the user and go back to the name input
+// Logout
 function logout() {
   localStorage.removeItem("userName");
-  document.getElementById("nameSection").style.display = "block";
-  document.getElementById("chatSection").style.display = "none";
-  userName = "";
-  currentChat = null;
-  currentChatOwner = "";
+  window.location.reload();
 }
 </script>
 
