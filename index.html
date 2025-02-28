@@ -139,11 +139,14 @@
   <div class="contact-list" id="contactList">
     <h3>Contacts</h3>
     <div id="contacts"></div>
+    <button onclick="createNewChat()">Create New Chat</button>
   </div>
   <div class="chat-box">
     <div class="header">
       <h3 id="chatName">Select a chat</h3>
       <button onclick="logout()">Logout</button>
+      <button onclick="clearChatForEveryone()">Clear Chat (Everyone)</button>
+      <button onclick="clearChatForSelf()">Clear Chat (Only Me)</button>
     </div>
     <div id="messages" class="messages"></div>
     <input type="text" id="messageInput" placeholder="Type a message..." />
@@ -172,6 +175,7 @@ const db = firebase.database();
 
 let userName = "";
 let currentChat = null;
+let currentChatOwner = "";
 
 // Set username and display chat section
 function setUserName() {
@@ -214,16 +218,37 @@ function loadContacts() {
         const contactDiv = document.createElement("div");
         contactDiv.classList.add("contact-item");
         contactDiv.textContent = chat.name;
-        contactDiv.onclick = () => openChat(chatId, chat.name);
+        contactDiv.onclick = () => openChat(chatId, chat.name, chat.owner);
         contactsContainer.appendChild(contactDiv);
       }
     }
   });
 }
 
+// Create a new chat (public or private)
+function createNewChat() {
+  const chatName = prompt("Enter chat name:");
+  const isPrivate = confirm("Is this a private chat?");
+
+  const newChatRef = db.ref('chats').push();
+  const chatData = {
+    name: chatName,
+    owner: userName,
+    isPrivate: isPrivate,
+    members: isPrivate ? [userName] : [], // If private, start with only the owner
+    messages: {}
+  };
+
+  newChatRef.set(chatData).then(() => {
+    alert("New chat created!");
+    loadContacts();
+  });
+}
+
 // Open a chat and display messages
-function openChat(chatId, chatName) {
+function openChat(chatId, chatName, owner) {
   currentChat = chatId;
+  currentChatOwner = owner;
   document.getElementById("chatName").textContent = chatName;
   loadMessages(chatId);
 }
@@ -253,44 +278,47 @@ function sendMessage() {
   const messageContent = document.getElementById("messageInput").value.trim();
   if (messageContent && currentChat) {
     const messagesRef = db.ref('chats/' + currentChat + '/messages');
-    // Add a new message to Firebase
+    // Add a new message to the chat
     messagesRef.push({
       user: userName,
       content: messageContent
-    })
-    .then(() => {
-      document.getElementById("messageInput").value = ""; // Clear input field after sending
-    })
-    .catch(error => {
-      console.error("Error sending message: ", error);
     });
-  } else {
-    console.log("No message content or no current chat.");
+    document.getElementById("messageInput").value = "";
   }
 }
 
-// Logout function
-function logout() {
-  if (userName) {
-    db.ref('users/' + userName).remove(); // Remove username from Firebase
+// Clear chat for only the current user
+function clearChatForSelf() {
+  if (currentChat) {
+    const messagesRef = db.ref('chats/' + currentChat + '/messages');
+    messagesRef.once('value').then(snapshot => {
+      const messages = snapshot.val();
+      for (const msgId in messages) {
+        if (messages[msgId].user === userName) {
+          db.ref('chats/' + currentChat + '/messages/' + msgId).remove();
+        }
+      }
+    });
   }
+}
+
+// Clear chat for everyone (if owner)
+function clearChatForEveryone() {
+  if (currentChat && currentChatOwner === userName) {
+    const messagesRef = db.ref('chats/' + currentChat + '/messages');
+    messagesRef.remove();
+  }
+}
+
+// Logout the user and go back to the name input
+function logout() {
+  localStorage.removeItem("userName");
+  document.getElementById("nameSection").style.display = "block";
+  document.getElementById("chatSection").style.display = "none";
   userName = "";
   currentChat = null;
-  document.getElementById("chatSection").style.display = "none";
-  document.getElementById("nameSection").style.display = "block";
-  document.getElementById("userName").value = "";
+  currentChatOwner = "";
 }
-
-// Check if user is already logged in
-window.onload = () => {
-  const storedUserName = localStorage.getItem("userName");
-  if (storedUserName) {
-    userName = storedUserName;
-    document.getElementById("nameSection").style.display = "none";
-    document.getElementById("chatSection").style.display = "flex";
-    loadContacts();
-  }
-};
 </script>
 
 </body>
