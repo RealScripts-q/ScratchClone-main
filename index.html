@@ -5,19 +5,136 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WhatsApp-like Chat</title>
   <style>
-    /* Same CSS styles as before */
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: #e5ddd5;
+      margin: 0;
+      padding: 0;
+    }
+    .chat-container {
+      display: flex;
+      height: 100vh;
+    }
+    .contact-list {
+      width: 300px;
+      background-color: #ffffff;
+      border-right: 1px solid #ddd;
+      padding: 20px;
+      overflow-y: scroll;
+    }
+    .contact-item {
+      padding: 12px 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #ddd;
+      font-size: 14px;
+    }
+    .contact-item:hover {
+      background-color: #f1f1f1;
+    }
+    .chat-box {
+      flex-grow: 1;
+      background-color: #fff;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    #chatName {
+      font-size: 18px;
+      font-weight: bold;
+      color: #075e54;
+    }
+    button {
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: 5px;
+      background-color: #25D366;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #128C7E;
+    }
+    #messages {
+      flex-grow: 1;
+      overflow-y: scroll;
+      padding: 10px 0;
+      margin-bottom: 10px;
+    }
+    .message {
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      border-radius: 18px;
+      font-size: 14px;
+      max-width: 70%;
+      word-wrap: break-word;
+    }
+    .message.sent {
+      background-color: #25D366;
+      color: white;
+      align-self: flex-end;
+    }
+    .message.received {
+      background-color: #f1f1f1;
+      align-self: flex-start;
+    }
+    #messageInput {
+      padding: 10px;
+      width: calc(100% - 80px);
+      font-size: 14px;
+      border-radius: 18px;
+      border: 1px solid #ddd;
+      margin-top: 10px;
+    }
+    .contact-list h3 {
+      font-size: 16px;
+      font-weight: bold;
+      color: #075e54;
+      margin-bottom: 15px;
+    }
+    #nameSection {
+      padding: 20px;
+      text-align: center;
+    }
+    #nameSection input {
+      padding: 12px;
+      font-size: 14px;
+      border-radius: 18px;
+      border: 1px solid #ddd;
+      margin-bottom: 15px;
+      width: 80%;
+    }
+    #nameSection button {
+      background-color: #25D366;
+      color: white;
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 18px;
+      border: none;
+      cursor: pointer;
+    }
+    #nameSection button:hover {
+      background-color: #128C7E;
+    }
   </style>
 </head>
 <body>
 
-<!-- Name Section -->
 <div id="nameSection">
   <h2>Enter Your Name</h2>
   <input type="text" id="userName" placeholder="Enter your name" />
   <button onclick="setUserName()">Start Chat</button>
 </div>
 
-<!-- Chat Section -->
 <div id="chatSection" class="chat-container" style="display:none;">
   <div class="contact-list" id="contactList">
     <h3>Contacts</h3>
@@ -126,54 +243,20 @@ function loadContacts() {
 // Create a new chat (public or private)
 function createNewChat() {
   const chatName = prompt("Enter chat name:");
-  const isPrivate = confirm("Is this a private chat? (Public will be visible to everyone)");
+  const isPrivate = confirm("Is this a private chat?");
 
-  if (isPrivate) {
-    const invitedUsers = prompt("Enter usernames to invite, separated by commas:").split(",").map(user => user.trim()).filter(user => user !== "");
-    createPrivateChat(chatName, invitedUsers);
-  } else {
-    createPublicChat(chatName);
-  }
-}
-
-// Create a public chat
-function createPublicChat(chatName) {
   const newChatRef = db.ref('chats').push();
   const chatData = {
     name: chatName,
     owner: userName,
-    isPrivate: false,
-    members: [userName], // Public chat starts with the creator
+    isPrivate: isPrivate,
+    members: isPrivate ? [userName] : [], // If private, start with only the owner
     messages: {}
   };
 
   newChatRef.set(chatData).then(() => {
-    alert("New public chat created!");
+    alert("New chat created!");
     loadContacts();
-  });
-}
-
-// Create a private chat
-function createPrivateChat(chatName, invitedUsers) {
-  const newChatRef = db.ref('chats').push();
-  const chatData = {
-    name: chatName,
-    owner: userName,
-    isPrivate: true,
-    members: [userName, ...invitedUsers], // Private chat starts with the creator and invited users
-    messages: {}
-  };
-
-  newChatRef.set(chatData).then(() => {
-    alert("New private chat created! Invited users will be added.");
-    loadContacts();
-    // Add invites to each user in the invited list (they will see the chat after accepting)
-    invitedUsers.forEach(user => {
-      db.ref('users/' + user + '/invites').push({
-        chatId: newChatRef.key,
-        chatName: chatName
-      });
-    });
   });
 }
 
