@@ -176,6 +176,19 @@ const db = firebase.database();
 let userName = "";
 let currentChat = null;
 let currentChatOwner = "";
+let isMuted = false;
+let muteEndTime = 0;  // Timestamp to check if the user is muted
+
+// List of prohibited words (example, you can expand this list)
+const prohibitedWords = ["badword1", "badword2", "curse1", "curse2"]; 
+
+// Check if the name exists in localStorage or set it
+if (localStorage.getItem("userName")) {
+  userName = localStorage.getItem("userName");
+  document.getElementById("nameSection").style.display = "none";
+  document.getElementById("chatSection").style.display = "flex";
+  loadContacts();
+}
 
 // Set username and display chat section
 function setUserName() {
@@ -185,7 +198,7 @@ function setUserName() {
       if (exists) {
         alert("This name is already taken. Please choose another name.");
       } else {
-        // Save the name to Firebase
+        // Save the name to Firebase and localStorage
         db.ref('users').child(userName).set(true);
         localStorage.setItem("userName", userName);
         document.getElementById("nameSection").style.display = "none";
@@ -276,7 +289,21 @@ function loadMessages(chatId) {
 // Send a message to the selected chat
 function sendMessage() {
   const messageContent = document.getElementById("messageInput").value.trim();
+
+  // Check if the user is muted
+  if (isMuted && Date.now() < muteEndTime) {
+    alert("You are muted for 1 hour due to inappropriate language.");
+    return;
+  }
+
   if (messageContent && currentChat) {
+    // Check for curse words
+    if (containsCurseWords(messageContent)) {
+      muteUserForAnHour();
+      alert("You have been muted for 1 hour due to inappropriate language.");
+      return;
+    }
+
     const messagesRef = db.ref('chats/' + currentChat + '/messages');
     // Add a new message to the chat
     messagesRef.push({
@@ -285,6 +312,17 @@ function sendMessage() {
     });
     document.getElementById("messageInput").value = "";
   }
+}
+
+// Check if message contains any prohibited words
+function containsCurseWords(message) {
+  return prohibitedWords.some(word => message.toLowerCase().includes(word));
+}
+
+// Mute user for 1 hour
+function muteUserForAnHour() {
+  isMuted = true;
+  muteEndTime = Date.now() + 60 * 60 * 1000; // Mute for 1 hour
 }
 
 // Clear chat for only the current user
