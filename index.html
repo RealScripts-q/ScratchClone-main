@@ -3,199 +3,268 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simple Chat System</title>
+  <title>WhatsApp-like Chat</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f7f7f7;
+      background-color: #f0f0f0;
       margin: 0;
       padding: 0;
     }
-    .container {
-      width: 80%;
-      max-width: 900px;
-      margin: 0 auto;
+    .chat-container {
+      display: flex;
+      height: 100vh;
+    }
+    .contact-list {
+      width: 300px;
+      background-color: #ffffff;
+      border-right: 1px solid #ddd;
       padding: 20px;
+      overflow-y: scroll;
+    }
+    .contact-item {
+      padding: 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+    }
+    .contact-item:hover {
+      background-color: #f0f0f0;
+    }
+    .chat-box {
+      flex-grow: 1;
       background-color: #fff;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
     }
-    #nameSection, #chatSection {
-      display: none;
-    }
-    #messages {
-      max-height: 300px;
-      overflow-y: auto;
-      margin-bottom: 20px;
-      border-bottom: 1px solid #ccc;
+    .messages {
+      flex-grow: 1;
+      overflow-y: scroll;
+      margin-bottom: 10px;
     }
     .message {
       padding: 10px;
-      margin: 5px 0;
-      border-radius: 5px;
-    }
-    .userMessage {
-      background-color: #d1f7c4;
-      text-align: right;
-    }
-    .otherMessage {
-      background-color: #f1f1f1;
-    }
-    input[type="text"] {
-      padding: 10px;
-      width: 80%;
       margin-bottom: 10px;
+      border-radius: 8px;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+    .message.sent {
+      background-color: #4caf50;
+      color: white;
+      align-self: flex-end;
+    }
+    .message.received {
+      background-color: #f1f1f1;
+      align-self: flex-start;
+    }
+    #messageInput {
+      padding: 10px;
+      width: calc(100% - 80px);
       border-radius: 5px;
-      border: 1px solid #ccc;
+      border: 1px solid #ddd;
     }
     button {
-      padding: 10px 20px;
-      background-color: #007bff;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: #4CAF50;
       color: white;
       border: none;
-      border-radius: 5px;
       cursor: pointer;
     }
     button:hover {
-      background-color: #0056b3;
+      background-color: #45a049;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #nameSection {
+      padding: 20px;
+      text-align: center;
+    }
+    #nameSection input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      margin-bottom: 10px;
+      width: 80%;
+    }
+    #nameSection button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+    }
+    #nameSection button:hover {
+      background-color: #45a049;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div id="nameSection">
-      <h2>Enter your name</h2>
-      <input type="text" id="userName" placeholder="Enter your name">
-      <button onclick="startChat()">Start Chat</button>
-    </div>
 
-    <div id="chatSection">
-      <h2>Chat Room: <span id="chatName"></span></h2>
-      <div id="messages"></div>
-      <input type="text" id="messageInput" placeholder="Type a message">
-      <button onclick="sendMessage()">Send</button>
-    </div>
+<div id="nameSection">
+  <h2>Enter Your Name</h2>
+  <input type="text" id="userName" placeholder="Enter your name" />
+  <button onclick="setUserName()">Start Chat</button>
+</div>
+
+<div id="chatSection" class="chat-container" style="display:none;">
+  <div class="contact-list" id="contactList">
+    <h3>Contacts</h3>
+    <div id="contacts"></div>
   </div>
+  <div class="chat-box">
+    <div class="header">
+      <h3 id="chatName">Select a chat</h3>
+      <button onclick="logout()">Logout</button>
+    </div>
+    <div id="messages" class="messages"></div>
+    <input type="text" id="messageInput" placeholder="Type a message..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+</div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-  <script>
-    // Firebase Configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyB4HiV-vR8ZwqH2VIAT9HaPC--lPVN6B1U",
-      authDomain: "memechat2-54d1d.firebaseapp.com",
-      databaseURL: "https://memechat2-54d1d-default-rtdb.firebaseio.com",
-      projectId: "memechat2-54d1d",
-      storageBucket: "memechat2-54d1d.firebasestorage.app",
-      messagingSenderId: "598300946052",
-      appId: "1:598300946052:web:48833a7bee0a2796159cd1"
-    };
+<script>
+// Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyB4HiV-vR8ZwqH2VIAT9HaPC--lPVN6B1U",
+  authDomain: "memechat2-54d1d.firebaseapp.com",
+  databaseURL: "https://memechat2-54d1d-default-rtdb.firebaseio.com",
+  projectId: "memechat2-54d1d",
+  storageBucket: "memechat2-54d1d.firebasestorage.app",
+  messagingSenderId: "598300946052",
+  appId: "1:598300946052:web:7eed3b96d89933b1159cd1"
+};
 
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-    let userName = "";
-    let currentChat = null;
+let userName = "";
+let currentChat = null;
 
-    // Show the name input section
-    document.getElementById("nameSection").style.display = "block";
-
-    // Start chat and set user name
-    function startChat() {
-      userName = document.getElementById("userName").value.trim();
-      if (userName) {
+// Set username and display chat section
+function setUserName() {
+  userName = document.getElementById("userName").value.trim();
+  if (userName) {
+    checkIfNameExists(userName).then(exists => {
+      if (exists) {
+        alert("This name is already taken. Please choose another name.");
+      } else {
+        // Save the name to Firebase
+        db.ref('users').child(userName).set(true);
         localStorage.setItem("userName", userName);
         document.getElementById("nameSection").style.display = "none";
-        document.getElementById("chatSection").style.display = "block";
-        loadChats();
-      } else {
-        alert("Please enter a name!");
+        document.getElementById("chatSection").style.display = "flex";
+        loadContacts();
+      }
+    });
+  } else {
+    alert("Please enter a valid name.");
+  }
+}
+
+// Check if the name already exists in Firebase
+function checkIfNameExists(name) {
+  return db.ref('users/' + name).once('value').then(snapshot => {
+    return snapshot.exists();
+  });
+}
+
+// Load contacts (chats) from Firebase
+function loadContacts() {
+  const contactsRef = db.ref('chats');
+  contactsRef.on('value', snapshot => {
+    const chats = snapshot.val();
+    const contactsContainer = document.getElementById("contacts");
+    contactsContainer.innerHTML = "";
+    if (chats) {
+      for (const chatId in chats) {
+        const chat = chats[chatId];
+        const contactDiv = document.createElement("div");
+        contactDiv.classList.add("contact-item");
+        contactDiv.textContent = chat.name;
+        contactDiv.onclick = () => openChat(chatId, chat.name);
+        contactsContainer.appendChild(contactDiv);
       }
     }
+  });
+}
 
-    // Load available chats from Firebase
-    function loadChats() {
-      const chatsRef = db.ref('chats');
-      chatsRef.on('value', snapshot => {
-        const chats = snapshot.val();
-        const messagesDiv = document.getElementById("messages");
-        messagesDiv.innerHTML = "";
+// Open a chat and display messages
+function openChat(chatId, chatName) {
+  currentChat = chatId;
+  document.getElementById("chatName").textContent = chatName;
+  loadMessages(chatId);
+}
 
-        if (chats) {
-          Object.keys(chats).forEach(chatId => {
-            const chat = chats[chatId];
-            const chatDiv = document.createElement("div");
-            chatDiv.textContent = chat.name;
-            chatDiv.onclick = () => openChat(chatId, chat.name);
-            messagesDiv.appendChild(chatDiv);
-          });
-        }
-
-        // Option to create a new chat
-        const newChatDiv = document.createElement("div");
-        newChatDiv.textContent = "Create New Chat";
-        newChatDiv.onclick = () => createNewChat();
-        messagesDiv.appendChild(newChatDiv);
-      });
-    }
-
-    // Open selected chat
-    function openChat(chatId, chatName) {
-      currentChat = chatId;
-      document.getElementById("chatName").textContent = chatName;
-      loadMessages(chatId);
-    }
-
-    // Create a new chat
-    function createNewChat() {
-      const chatName = prompt("Enter a name for your new chat:");
-      if (chatName) {
-        const newChatRef = db.ref('chats').push();
-        newChatRef.set({
-          name: chatName,
-          messages: []
-        }).then(() => {
-          openChat(newChatRef.key, chatName);
-        });
+// Load messages for the selected chat
+function loadMessages(chatId) {
+  const messagesRef = db.ref('chats/' + chatId + '/messages');
+  messagesRef.on('value', snapshot => {
+    const messages = snapshot.val();
+    const messagesContainer = document.getElementById("messages");
+    messagesContainer.innerHTML = "";
+    if (messages) {
+      for (const msgId in messages) {
+        const msg = messages[msgId];
+        const messageDiv = document.createElement("div");
+        messageDiv.classList.add("message", msg.user === userName ? "sent" : "received");
+        messageDiv.textContent = `${msg.user}: ${msg.content}`;
+        messagesContainer.appendChild(messageDiv);
       }
     }
+    messagesContainer.scrollTop = messagesContainer.scrollHeight; // Scroll to the bottom
+  });
+}
 
-    // Load messages for the selected chat
-    function loadMessages(chatId) {
-      const messagesRef = db.ref('chats/' + chatId + '/messages');
-      messagesRef.on('value', snapshot => {
-        const messages = snapshot.val();
-        const messagesDiv = document.getElementById("messages");
-        messagesDiv.innerHTML = "";
-        
-        if (messages) {
-          Object.keys(messages).forEach(msgId => {
-            const msg = messages[msgId];
-            const messageDiv = document.createElement("div");
-            messageDiv.className = msg.user === userName ? 'message userMessage' : 'message otherMessage';
-            messageDiv.textContent = `${msg.user}: ${msg.content}`;
-            messagesDiv.appendChild(messageDiv);
-          });
-        }
-      });
-    }
+// Send a message to the selected chat
+function sendMessage() {
+  const messageContent = document.getElementById("messageInput").value.trim();
+  if (messageContent && currentChat) {
+    const messagesRef = db.ref('chats/' + currentChat + '/messages');
+    messagesRef.push({
+      user: userName,
+      content: messageContent
+    }).then(() => {
+      document.getElementById("messageInput").value = ""; // Clear input field
+    });
+  }
+}
 
-    // Send message to the selected chat
-    function sendMessage() {
-      const messageInput = document.getElementById("messageInput").value.trim();
-      if (messageInput && currentChat) {
-        const messagesRef = db.ref('chats/' + currentChat + '/messages');
-        messagesRef.push({
-          user: userName,
-          content: messageInput
-        }).then(() => {
-          document.getElementById("messageInput").value = ""; // Clear input
-        });
-      }
-    }
-  </script>
+// Logout function
+function logout() {
+  if (userName) {
+    db.ref('users/' + userName).remove(); // Remove username from Firebase
+  }
+  userName = "";
+  currentChat = null;
+  document.getElementById("chatSection").style.display = "none";
+  document.getElementById("nameSection").style.display = "block";
+  document.getElementById("userName").value = "";
+}
+
+// Check if user is already logged in
+window.onload = () => {
+  const storedUserName = localStorage.getItem("userName");
+  if (storedUserName) {
+    userName = storedUserName;
+    document.getElementById("nameSection").style.display = "none";
+    document.getElementById("chatSection").style.display = "flex";
+    loadContacts();
+  }
+};
+</script>
+
 </body>
 </html>
