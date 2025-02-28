@@ -87,25 +87,47 @@
       text-align: left;
     }
 
-    .name-input {
+    .name-input, .chat-options {
       display: flex;
       justify-content: center;
       padding: 20px;
       width: 100%;
+      flex-direction: column;
+      align-items: center;
     }
 
-    .name-input input {
+    .name-input input, .chat-options input {
       padding: 10px;
       border-radius: 5px;
       width: 200px;
+      margin: 10px 0;
     }
 
-    .name-input button {
+    .name-input button, .chat-options button {
       padding: 10px;
       background-color: #4CAF50;
       color: white;
       border: none;
       border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .name-input button:hover, .chat-options button:hover {
+      background-color: #45a049;
+    }
+
+    .chat-list {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .chat-item {
+      padding: 10px;
+      background-color: #e2e2e2;
+      border-radius: 5px;
+      margin-bottom: 10px;
       cursor: pointer;
     }
   </style>
@@ -116,6 +138,28 @@
     <div class="name-input" id="nameInputSection">
       <input type="text" id="userName" placeholder="Enter your name" />
       <button onclick="setName()">Start Chat</button>
+    </div>
+
+    <!-- Chat options (create or join chat) -->
+    <div class="chat-options" id="chatOptionsSection" style="display:none;">
+      <button onclick="showCreateChatSection()">Create a New Chat</button>
+      <button onclick="showPublicChats()">Join an Existing Chat</button>
+    </div>
+
+    <!-- Create a new chat section -->
+    <div class="chat-options" id="createChatSection" style="display:none;">
+      <input type="text" id="chatName" placeholder="Enter chat name" />
+      <label for="chatVisibility">Public</label>
+      <input type="radio" id="publicChat" name="visibility" value="public" checked />
+      <label for="chatVisibility">Private</label>
+      <input type="radio" id="privateChat" name="visibility" value="private" />
+      <button onclick="createChat()">Create Chat</button>
+    </div>
+
+    <!-- Available chats -->
+    <div class="chat-list" id="chatListSection" style="display:none;">
+      <h3>Available Public Chats</h3>
+      <div id="chatList"></div>
     </div>
 
     <!-- Chat section -->
@@ -134,39 +178,97 @@
   <script>
     // Check if the user has a name saved in localStorage
     if (localStorage.getItem("userName")) {
-      loadChat();
+      loadChatOptions();
     } else {
       document.getElementById("nameInputSection").style.display = "flex";
       document.getElementById("chatSection").style.display = "none";
     }
 
-    // Set the user's name and load the chat
+    // Set the user's name and load the chat options
     function setName() {
       const userName = document.getElementById("userName").value.trim();
       if (userName !== "") {
         localStorage.setItem("userName", userName);
-        loadChat();
+        loadChatOptions();
       } else {
         alert("Please enter a valid name.");
       }
     }
 
-    // Load the chat messages and display them
-    function loadChat() {
+    // Show chat options (create or join)
+    function loadChatOptions() {
       const userName = localStorage.getItem("userName");
       document.getElementById("nameInputSection").style.display = "none";
-      document.getElementById("chatSection").style.display = "block";
-
+      document.getElementById("chatOptionsSection").style.display = "block";
       document.querySelector(".chat-header h2").innerText = `Welcome, ${userName}!`;
+    }
 
-      // Load messages from localStorage
-      const messages = JSON.parse(localStorage.getItem("messages")) || [];
-      const chatBox = document.getElementById("chatBox");
+    // Show create chat section
+    function showCreateChatSection() {
+      document.getElementById("chatOptionsSection").style.display = "none";
+      document.getElementById("createChatSection").style.display = "block";
+    }
 
-      // Display messages
-      messages.forEach(msg => {
+    // Show available public chats
+    function showPublicChats() {
+      document.getElementById("chatOptionsSection").style.display = "none";
+      document.getElementById("chatListSection").style.display = "block";
+      loadPublicChats();
+    }
+
+    // Load available public chats
+    function loadPublicChats() {
+      const chats = JSON.parse(localStorage.getItem("chats")) || [];
+      const chatList = document.getElementById("chatList");
+      chatList.innerHTML = '';
+
+      chats.forEach(chat => {
+        if (chat.visibility === "public") {
+          const chatItem = document.createElement("div");
+          chatItem.classList.add("chat-item");
+          chatItem.innerHTML = chat.name;
+          chatItem.onclick = () => joinChat(chat.name);
+          chatList.appendChild(chatItem);
+        }
+      });
+    }
+
+    // Create a new chat (public or private)
+    function createChat() {
+      const chatName = document.getElementById("chatName").value.trim();
+      const visibility = document.querySelector('input[name="visibility"]:checked').value;
+
+      if (chatName !== "") {
+        const chats = JSON.parse(localStorage.getItem("chats")) || [];
+        chats.push({ name: chatName, visibility: visibility, messages: [] });
+        localStorage.setItem("chats", JSON.stringify(chats));
+        alert(`Chat "${chatName}" created successfully!`);
+        showPublicChats();
+      } else {
+        alert("Please enter a chat name.");
+      }
+    }
+
+    // Join a selected chat
+    function joinChat(chatName) {
+      const chats = JSON.parse(localStorage.getItem("chats")) || [];
+      const selectedChat = chats.find(chat => chat.name === chatName);
+      if (selectedChat) {
+        loadChat(selectedChat);
+      }
+    }
+
+    // Load the selected chat's messages
+    function loadChat(chat) {
+      document.getElementById("chatListSection").style.display = "none";
+      document.getElementById("chatSection").style.display = "block";
+      document.getElementById("chatBox").innerHTML = '';
+
+      chat.messages.forEach(msg => {
         displayMessage(msg.content, msg.type, msg.user);
       });
+
+      document.querySelector(".chat-header h2").innerText = `Chat: ${chat.name}`;
     }
 
     // Display a message in the chat box
@@ -184,26 +286,19 @@
       const messageInput = document.getElementById("messageInput");
       const messageText = messageInput.value.trim();
       const userName = localStorage.getItem("userName");
+      const chatName = document.querySelector(".chat-header h2").innerText.replace("Chat: ", "");
 
       if (messageText !== "") {
-        // Store the message in localStorage
-        const messages = JSON.parse(localStorage.getItem("messages")) || [];
-        messages.push({ content: messageText, type: "sent", user: userName });
-        localStorage.setItem("messages", JSON.stringify(messages));
-
-        // Display the message
-        displayMessage(messageText, "sent", userName);
-
-        messageInput.value = "";
-        messageInput.focus();
-
-        // Simulate a response from another user (for demonstration)
-        setTimeout(() => {
-          const response = `Hello, ${userName}! This is another user.`;
-          messages.push({ content: response, type: "received", user: "Someone else" });
-          localStorage.setItem("messages", JSON.stringify(messages));
-          displayMessage(response, "received", "Someone else");
-        }, 1000);
+        const chats = JSON.parse(localStorage.getItem("chats")) || [];
+        const selectedChat = chats.find(chat => chat.name === chatName);
+        
+        if (selectedChat) {
+          selectedChat.messages.push({ content: messageText, type: "sent", user: userName });
+          localStorage.setItem("chats", JSON.stringify(chats));
+          
+          displayMessage(messageText, "sent", userName);
+          messageInput.value = "";
+        }
       }
     }
   </script>
