@@ -233,12 +233,19 @@ function sendMessage() {
   const messageContent = document.getElementById("messageInput").value.trim();
   if (messageContent && currentChat) {
     const messagesRef = db.ref('chats/' + currentChat + '/messages');
+    // Add a new message to Firebase
     messagesRef.push({
       user: userName,
       content: messageContent
-    }).then(() => {
-      document.getElementById("messageInput").value = ""; // Clear input field
+    })
+    .then(() => {
+      document.getElementById("messageInput").value = ""; // Clear input field after sending
+    })
+    .catch(error => {
+      console.error("Error sending message: ", error);
     });
+  } else {
+    console.log("No message content or no current chat.");
   }
 }
 
