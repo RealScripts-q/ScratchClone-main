@@ -91,6 +91,19 @@
       font-size: 16px;
       border-radius: 5px;
       border: 1px solid #ddd;
+      margin-bottom: 10px;
+      width: 80%;
+    }
+    #nameSection button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+    }
+    #nameSection button:hover {
+      background-color: #45a049;
     }
   </style>
 </head>
@@ -144,13 +157,28 @@ let currentChat = null;
 function setUserName() {
   userName = document.getElementById("userName").value.trim();
   if (userName) {
-    localStorage.setItem("userName", userName);
-    document.getElementById("nameSection").style.display = "none";
-    document.getElementById("chatSection").style.display = "flex";
-    loadContacts();
+    checkIfNameExists(userName).then(exists => {
+      if (exists) {
+        alert("This name is already taken. Please choose another name.");
+      } else {
+        // Save the name to Firebase
+        db.ref('users').child(userName).set(true);
+        localStorage.setItem("userName", userName);
+        document.getElementById("nameSection").style.display = "none";
+        document.getElementById("chatSection").style.display = "flex";
+        loadContacts();
+      }
+    });
   } else {
     alert("Please enter a valid name.");
   }
+}
+
+// Check if the name already exists in Firebase
+function checkIfNameExists(name) {
+  return db.ref('users/' + name).once('value').then(snapshot => {
+    return snapshot.exists();
+  });
 }
 
 // Load contacts (chats) from Firebase
@@ -205,17 +233,27 @@ function sendMessage() {
   const messageContent = document.getElementById("messageInput").value.trim();
   if (messageContent && currentChat) {
     const messagesRef = db.ref('chats/' + currentChat + '/messages');
+    // Add a new message to Firebase
     messagesRef.push({
       user: userName,
       content: messageContent
-    }).then(() => {
-      document.getElementById("messageInput").value = ""; // Clear input field
+    })
+    .then(() => {
+      document.getElementById("messageInput").value = ""; // Clear input field after sending
+    })
+    .catch(error => {
+      console.error("Error sending message: ", error);
     });
+  } else {
+    console.log("No message content or no current chat.");
   }
 }
 
 // Logout function
 function logout() {
+  if (userName) {
+    db.ref('users/' + userName).remove(); // Remove username from Firebase
+  }
   userName = "";
   currentChat = null;
   document.getElementById("chatSection").style.display = "none";
@@ -236,4 +274,4 @@ window.onload = () => {
 </script>
 
 </body>
-</html> 
+</html>
