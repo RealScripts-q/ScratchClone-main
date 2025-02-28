@@ -3,190 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Code Playground</title>
+    <title>Firebase Chat</title>
     <style>
+        /* Add basic styles for the chat interface */
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-        }
-
-        header {
-            background-color: #4CAF50;
-            color: white;
-            text-align: center;
-            padding: 20px;
-        }
-
-        .container {
             display: flex;
-            height: 80vh;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            margin: 0;
             padding: 20px;
-            justify-content: space-between;
+            background-color: #f5f5f5;
         }
-
-        .code-blocks {
-            width: 30%;
+        #messages {
+            width: 100%;
+            height: 300px;
+            overflow-y: scroll;
             background-color: #fff;
+            margin-bottom: 10px;
             padding: 10px;
-            border: 2px solid #ddd;
             border-radius: 5px;
-            height: 100%;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow-y: auto;
+            border: 1px solid #ccc;
         }
-
-        .code-block {
-            padding: 10px;
-            margin: 5px;
-            background-color: #f0f0f0;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            cursor: grab;
-        }
-
-        .playground {
-            width: 60%;
-            background-color: #fff;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            padding: 10px;
-            height: 100%;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .dropped-element {
+        .message {
             padding: 5px;
-            margin: 5px;
-            background-color: #f0f0f0;
-            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .message .user {
+            font-weight: bold;
+        }
+        .message .content {
+            margin-left: 10px;
+        }
+        input[type="text"], button {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
             border-radius: 5px;
         }
-
         button {
-            padding: 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
             cursor: pointer;
-            border-radius: 5px;
-            margin-top: 20px;
-            display: block;
-            margin: 20px auto;
-        }
-
-        .output {
-            margin-top: 20px;
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            background-color: #fff;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Code Playground</h1>
-    </header>
 
-    <div class="container">
-        <div class="code-blocks">
-            <h2>HTML Blocks</h2>
-            <div class="code-block" draggable="true" id="doctype">DOCTYPE HTML</div>
-            <div class="code-block" draggable="true" id="html">HTML</div>
-            <div class="code-block" draggable="true" id="head">HEAD</div>
-            <div class="code-block" draggable="true" id="body">BODY</div>
-            <div class="code-block" draggable="true" id="h1">H1</div>
-            <div class="code-block" draggable="true" id="p">P (Paragraph)</div>
-            <div class="code-block" draggable="true" id="img">IMG</div>
-            <div class="code-block" draggable="true" id="a">A (Link)</div>
-            <div class="code-block" draggable="true" id="button">BUTTON</div>
+    <h2>Chat Room</h2>
+    <div id="messages"></div>
 
-            <h2>CSS Blocks</h2>
-            <div class="code-block" draggable="true" id="background-color">Background Color</div>
-            <div class="code-block" draggable="true" id="color">Text Color</div>
-            <div class="code-block" draggable="true" id="font-size">Font Size</div>
+    <input type="text" id="messageInput" placeholder="Type your message...">
+    <button onclick="sendMessage()">Send</button>
 
-            <h2>JavaScript Blocks</h2>
-            <div class="code-block" draggable="true" id="alert">Alert</div>
-            <div class="code-block" draggable="true" id="onclick">On Click Event</div>
-        </div>
-
-        <div class="playground" id="playground" ondrop="drop(event)" ondragover="allowDrop(event)">
-            <h2>Your Playground</h2>
-            <div class="dropped-element">DOCTYPE HTML</div>
-            <div class="dropped-element">HTML</div>
-            <div class="dropped-element">HEAD</div>
-            <div class="dropped-element">BODY</div>
-            <div class="dropped-element">H1</div>
-            <div class="dropped-element">Welcome to your playground!</div>
-            <div class="dropped-element">P (Paragraph)</div>
-            <div class="dropped-element">Start building your website by dragging blocks from the left.</div>
-        </div>
-    </div>
-
-    <button onclick="runCode()">Run Code</button>
-
-    <div class="output" id="output">
-        <h2>Output</h2>
-        <iframe id="outputFrame" style="width: 100%; height: 300px; border: none;"></iframe>
-    </div>
-
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+    
     <script>
-        function allowDrop(event) {
-            event.preventDefault();
-        }
+        // Initialize Firebase with the provided config
+        import { initializeApp } from "firebase/app";
+        import { getDatabase, ref, set, onValue } from "firebase/database";
 
-        function drag(event) {
-            event.dataTransfer.setData("text", event.target.id);
-        }
+        const firebaseConfig = {
+            apiKey: "AIzaSyB4HiV-vR8ZwqH2VIAT9HaPC--lPVN6B1U",
+            authDomain: "memechat2-54d1d.firebaseapp.com",
+            projectId: "memechat2-54d1d",
+            storageBucket: "memechat2-54d1d.firebasestorage.app",
+            messagingSenderId: "598300946052",
+            appId: "1:598300946052:web:7eed3b96d89933b1159cd1"
+        };
 
-        function drop(event) {
-            event.preventDefault();
-            var data = event.dataTransfer.getData("text");
-            var draggedElement = document.getElementById(data);
-            var newElement = document.createElement('div');
-            newElement.textContent = draggedElement.textContent;
-            newElement.setAttribute('class', 'dropped-element');
-            event.target.appendChild(newElement);
-        }
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
 
-        function runCode() {
-            var playground = document.getElementById("playground");
-            var outputFrame = document.getElementById("outputFrame");
-            var iframeDoc = outputFrame.contentDocument || outputFrame.contentWindow.document;
+        // Get reference to the message list in the database
+        const messagesRef = ref(database, 'messages/');
 
-            var htmlContent = "<!DOCTYPE html><html><head><title>Code Playground</title></head><body>";
+        // Function to send message
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value;
+            if (message.trim() === '') return;
 
-            var blocks = playground.querySelectorAll('.dropped-element');
-            blocks.forEach(function(block) {
-                if (block.textContent == 'DOCTYPE HTML') {
-                    htmlContent += "<!DOCTYPE html>";
-                } else if (block.textContent == 'HTML') {
-                    htmlContent += "<html>";
-                } else if (block.textContent == 'HEAD') {
-                    htmlContent += "<head><title>Code Playground</title></head>";
-                } else if (block.textContent == 'BODY') {
-                    htmlContent += "<body>";
-                } else if (block.textContent == 'H1') {
-                    htmlContent += "<h1>";
-                } else {
-                    htmlContent += block.textContent + "</h1>";
-                }
+            const newMessageKey = Date.now(); // Unique key for the message
+            set(ref(database, 'messages/' + newMessageKey), {
+                user: 'User ' + Math.floor(Math.random() * 1000), // Random user for now
+                content: message,
             });
 
-            htmlContent += "</body></html>";
-
-            iframeDoc.open();
-            iframeDoc.write(htmlContent);
-            iframeDoc.close();
+            messageInput.value = ''; // Clear the input field
         }
 
-        document.querySelectorAll('.code-block').forEach(function(block) {
-            block.addEventListener('dragstart', drag);
-        });
+        // Function to display messages
+        function displayMessages() {
+            onValue(messagesRef, (snapshot) => {
+                const messagesContainer = document.getElementById('messages');
+                messagesContainer.innerHTML = ''; // Clear current messages
+                
+                snapshot.forEach((childSnapshot) => {
+                    const messageData = childSnapshot.val();
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('message');
+                    
+                    messageElement.innerHTML = `
+                        <span class="user">${messageData.user}</span>: 
+                        <span class="content">${messageData.content}</span>
+                    `;
+                    messagesContainer.appendChild(messageElement);
+                });
+            });
+        }
+
+        // Initialize the chat by displaying current messages
+        displayMessages();
     </script>
 </body>
 </html>
