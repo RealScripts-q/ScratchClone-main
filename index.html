@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Firebase Chat</title>
     <style>
-        /* Add basic styles for the chat interface */
+        /* Basic styling */
         body {
             font-family: Arial, sans-serif;
             display: flex;
@@ -16,6 +16,8 @@
             padding: 20px;
             background-color: #f5f5f5;
         }
+
+        /* Chat container styles */
         #messages {
             width: 100%;
             height: 300px;
@@ -25,43 +27,79 @@
             padding: 10px;
             border-radius: 5px;
             border: 1px solid #ccc;
+            display: flex;
+            flex-direction: column-reverse; /* To show messages at the bottom */
         }
+
         .message {
             padding: 5px;
             margin-bottom: 10px;
             border-bottom: 1px solid #ddd;
         }
+
         .message .user {
             font-weight: bold;
         }
+
         .message .content {
             margin-left: 10px;
         }
+
+        /* Input fields and button styles */
         input[type="text"], button {
             margin-top: 10px;
             padding: 10px;
             font-size: 16px;
             border-radius: 5px;
         }
+
         button {
             cursor: pointer;
+        }
+
+        /* Hide chat until user has entered a name */
+        #chatContainer {
+            display: none;
+        }
+
+        #nameInputContainer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        #nameInput {
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 16px;
+            border-radius: 5px;
         }
     </style>
 </head>
 <body>
 
     <h2>Chat Room</h2>
-    <div id="messages"></div>
 
-    <input type="text" id="messageInput" placeholder="Type your message...">
-    <button onclick="sendMessage()">Send</button>
+    <!-- Name input container -->
+    <div id="nameInputContainer">
+        <input type="text" id="nameInput" placeholder="Enter your name">
+        <button onclick="setUserName()">Enter Chat</button>
+    </div>
+
+    <!-- Chat container (hidden until the user sets a name) -->
+    <div id="chatContainer">
+        <div id="messages"></div>
+        <input type="text" id="messageInput" placeholder="Type your message...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
     
     <script>
-        // Initialize Firebase with the provided config
+        // Firebase initialization
         import { initializeApp } from "firebase/app";
         import { getDatabase, ref, set, onValue } from "firebase/database";
 
@@ -78,10 +116,26 @@
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
-        // Get reference to the message list in the database
+        let userName = ""; // Variable to store the user's name
+
+        // Function to set the user's name
+        function setUserName() {
+            const nameInput = document.getElementById('nameInput');
+            const name = nameInput.value.trim();
+            if (name) {
+                userName = name;
+                document.getElementById('nameInputContainer').style.display = 'none'; // Hide name input
+                document.getElementById('chatContainer').style.display = 'block'; // Show chat
+                displayMessages(); // Start displaying messages
+            } else {
+                alert("Please enter a valid name.");
+            }
+        }
+
+        // Reference to Firebase messages
         const messagesRef = ref(database, 'messages/');
 
-        // Function to send message
+        // Function to send a message
         function sendMessage() {
             const messageInput = document.getElementById('messageInput');
             const message = messageInput.value;
@@ -89,7 +143,7 @@
 
             const newMessageKey = Date.now(); // Unique key for the message
             set(ref(database, 'messages/' + newMessageKey), {
-                user: 'User ' + Math.floor(Math.random() * 1000), // Random user for now
+                user: userName, // Use the chosen user name
                 content: message,
             });
 
@@ -115,9 +169,6 @@
                 });
             });
         }
-
-        // Initialize the chat by displaying current messages
-        displayMessages();
     </script>
 </body>
 </html>
