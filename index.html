@@ -7,6 +7,7 @@
   <style>
     body {
       font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
     }
     .chat-container {
       max-width: 600px;
@@ -14,21 +15,33 @@
       padding: 20px;
       border: 1px solid #ddd;
       border-radius: 10px;
-      background-color: #f9f9f9;
+      background-color: #fff;
     }
     #chatBox {
-      max-height: 300px;
+      max-height: 400px;
       overflow-y: scroll;
       margin-bottom: 10px;
       border: 1px solid #ddd;
       padding: 10px;
-      background-color: #fff;
+      background-color: #f9f9f9;
+      border-radius: 8px;
     }
     #messageInput {
-      width: calc(100% - 60px);
+      width: calc(100% - 100px);
       padding: 10px;
       border-radius: 5px;
       border: 1px solid #ddd;
+    }
+    button {
+      padding: 10px;
+      border-radius: 5px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
     }
     .message {
       margin-bottom: 10px;
@@ -50,6 +63,20 @@
       border-radius: 5px;
       background-color: #eaeaea;
     }
+    .chat-item:hover {
+      background-color: #ddd;
+    }
+    #chatSection {
+      display: none;
+    }
+    #chatListSection {
+      display: none;
+    }
+    #logoutButton {
+      margin-top: 10px;
+      background-color: red;
+      color: white;
+    }
   </style>
 </head>
 <body>
@@ -64,20 +91,20 @@
     </div>
 
     <!-- Chat List Section -->
-    <div id="chatListSection" style="display:none;">
+    <div id="chatListSection">
       <h3>Select a Chat or Create One</h3>
       <div id="chatList" class="chat-list"></div>
-      <input type="text" id="newChatName" placeholder="Enter new chat name (optional)" />
+      <input type="text" id="newChatName" placeholder="Enter new chat name" />
       <button onclick="createChat()">Create New Chat</button>
     </div>
 
     <!-- Chat Section -->
-    <div id="chatSection" style="display:none;">
+    <div id="chatSection">
       <h3>Chat: <span id="currentChatName"></span></h3>
       <div id="chatBox"></div>
       <input type="text" id="messageInput" placeholder="Type a message..." />
       <button onclick="sendMessage()">Send</button>
-      <button onclick="logout()">Logout</button>
+      <button id="logoutButton" onclick="logout()">Logout</button>
     </div>
   </div>
 
