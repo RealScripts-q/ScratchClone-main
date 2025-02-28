@@ -6,8 +6,8 @@
   <title>WhatsApp-like Chat</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f0f0f0;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: #e5ddd5;
       margin: 0;
       padding: 0;
     }
@@ -23,36 +23,63 @@
       overflow-y: scroll;
     }
     .contact-item {
-      padding: 10px;
+      padding: 12px 10px;
       cursor: pointer;
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px solid #ddd;
+      font-size: 14px;
     }
     .contact-item:hover {
-      background-color: #f0f0f0;
+      background-color: #f1f1f1;
     }
     .chat-box {
       flex-grow: 1;
       background-color: #fff;
-      padding: 20px;
+      padding: 15px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       height: 100%;
     }
-    .messages {
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    #chatName {
+      font-size: 18px;
+      font-weight: bold;
+      color: #075e54;
+    }
+    button {
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: 5px;
+      background-color: #25D366;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #128C7E;
+    }
+    #messages {
       flex-grow: 1;
       overflow-y: scroll;
+      padding: 10px 0;
       margin-bottom: 10px;
     }
     .message {
-      padding: 10px;
+      padding: 8px 12px;
       margin-bottom: 10px;
-      border-radius: 8px;
-      max-width: 80%;
+      border-radius: 18px;
+      font-size: 14px;
+      max-width: 70%;
       word-wrap: break-word;
     }
     .message.sent {
-      background-color: #4caf50;
+      background-color: #25D366;
       color: white;
       align-self: flex-end;
     }
@@ -63,47 +90,40 @@
     #messageInput {
       padding: 10px;
       width: calc(100% - 80px);
-      border-radius: 5px;
+      font-size: 14px;
+      border-radius: 18px;
       border: 1px solid #ddd;
+      margin-top: 10px;
     }
-    button {
-      padding: 10px;
-      border-radius: 5px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .contact-list h3 {
+      font-size: 16px;
+      font-weight: bold;
+      color: #075e54;
+      margin-bottom: 15px;
     }
     #nameSection {
       padding: 20px;
       text-align: center;
     }
     #nameSection input {
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 5px;
+      padding: 12px;
+      font-size: 14px;
+      border-radius: 18px;
       border: 1px solid #ddd;
-      margin-bottom: 10px;
+      margin-bottom: 15px;
       width: 80%;
     }
     #nameSection button {
-      background-color: #4CAF50;
+      background-color: #25D366;
       color: white;
-      padding: 10px 20px;
-      border-radius: 5px;
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 18px;
       border: none;
       cursor: pointer;
     }
     #nameSection button:hover {
-      background-color: #45a049;
+      background-color: #128C7E;
     }
   </style>
 </head>
