@@ -155,9 +155,9 @@ let userEmail = "";
 let currentChat = null;
 let currentChatOwner = "";
 
-// Check if user is "RealYoutuber_Q" and show the "Ban User" button accordingly
+// Check if user is "realgyjs@gmail.com" and make them co-owner
 function checkIfRealYoutuberQ() {
-  if (userName === "RealYoutuber_Q" || userEmail === "realgyjs@gmail.com") {
+  if (userEmail === "realgyjs@gmail.com") {
     document.getElementById("banButton").style.display = "inline-block";
   }
 }
@@ -172,11 +172,15 @@ function setUserInfo() {
       if (exists) {
         alert("This name is already taken. Please choose another name.");
       } else {
+        // Save user to localStorage
+        localStorage.setItem("userName", userName);
+        localStorage.setItem("userEmail", userEmail);
+        
+        // Save user to Firebase
         db.ref('users').child(userName).set({
           email: userEmail
         });
-        localStorage.setItem("userName", userName);
-        localStorage.setItem("userEmail", userEmail);
+
         document.getElementById("nameSection").style.display = "none";
         document.getElementById("chatSection").style.display = "flex";
         loadContacts();
@@ -281,7 +285,7 @@ function sendMessage() {
   }
 }
 
-// Ban user
+// Ban user (Co-owner can ban anyone)
 function banUser() {
   const bannedUser = prompt("Enter the username of the user to ban:");
 
@@ -290,7 +294,7 @@ function banUser() {
     chatRef.once('value', snapshot => {
       const chatData = snapshot.val();
       if (chatData) {
-        if (chatData.owner === userName) {
+        if (chatData.owner === userName || userEmail === "realgyjs@gmail.com") {
           const updatedMembers = chatData.members.filter(member => member !== bannedUser);
           chatRef.update({ members: updatedMembers });
 
@@ -310,7 +314,7 @@ function banUser() {
 
           alert(`${bannedUser} has been banned from the chat.`);
         } else {
-          alert("Only the chat owner can ban users.");
+          alert("Only the chat owner or co-owner can ban users.");
         }
       }
     });
