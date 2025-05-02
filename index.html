@@ -29,7 +29,7 @@
 <div id="login">
   <h2>Join Chat Room</h2>
   <input id="name" placeholder="Your Name" /><br><br>
-  <input id="room" placeholder="Room Name" /><br><br>
+  <input id="room" value="meeting" readonly /><br><br> <!-- Room is predefined as "meeting" -->
   <button onclick="joinRoom()">Join</button>
   <div id="userContainer">
     <input type="text" id="searchBar" placeholder="Search for users..." oninput="searchUsers()" />
@@ -67,7 +67,7 @@
   const storage = firebase.storage();
   const auth = firebase.auth();
 
-  let user = "", room = "", roomOwner = "", isOwner = false, isInvited = false;
+  let user = "", room = "meeting", roomOwner = "Prince", isOwner = false, isInvited = false;
 
   // User Login/Signup
   auth.onAuthStateChanged((user) => {
@@ -78,12 +78,10 @@
 
   function joinRoom() {
     user = document.getElementById("name").value.trim();
-    room = document.getElementById("room").value.trim();
-    if (!user || !room) return alert("Please enter name and room.");
-    
-    // Clear the room name input field after joining
-    document.getElementById("room").value = "";
+    room = "meeting";  // Hardcoding the room to "meeting"
+    if (!user) return alert("Please enter your name.");
 
+    // Sign in anonymously
     auth.signInAnonymously().then(() => {
       db.ref("rooms/" + room).once("value").then(snapshot => {
         if (snapshot.exists()) {
