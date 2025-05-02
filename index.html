@@ -67,7 +67,7 @@
   const storage = firebase.storage();
   const auth = firebase.auth();
 
-  let user = "", room = "", roomOwner = "", isOwner = false;
+  let user = "", room = "", roomOwner = "", isOwner = false, isInvited = false;
 
   // User Login/Signup
   auth.onAuthStateChanged((user) => {
@@ -80,27 +80,31 @@
     user = document.getElementById("name").value.trim();
     room = document.getElementById("room").value.trim();
     if (!user || !room) return alert("Please enter name and room.");
+    
+    // Clear the room name input field after joining
+    document.getElementById("room").value = "";
 
     auth.signInAnonymously().then(() => {
       db.ref("rooms/" + room).once("value").then(snapshot => {
         if (snapshot.exists()) {
           roomOwner = snapshot.val().owner;
           isOwner = roomOwner === "Prince";  // Prince is the owner
-          document.getElementById("login").style.display = "none";
-          document.getElementById("chatBox").style.display = "flex";
-          listen();
-          updateUserList();
-          setInviteButtonVisibility();
+
+          // Check if the user is invited
+          db.ref("rooms/" + room + "/invitedUsers").once("value").then(invitedSnapshot => {
+            isInvited = invitedSnapshot.exists() && invitedSnapshot.val().includes(user);
+            if (isInvited || isOwner) {
+              document.getElementById("login").style.display = "none";
+              document.getElementById("chatBox").style.display = "flex";
+              listen();
+              updateUserList();
+              setInviteButtonVisibility();
+            } else {
+              alert("You are not invited to this room.");
+            }
+          });
         } else {
-          // If the room does not exist, create it and assign Prince as the owner
-          db.ref("rooms/" + room).set({ owner: "Prince" });
-          roomOwner = "Prince";
-          isOwner = true;
-          document.getElementById("login").style.display = "none";
-          document.getElementById("chatBox").style.display = "flex";
-          listen();
-          updateUserList();
-          setInviteButtonVisibility();
+          alert("Room does not exist.");
         }
       });
     }).catch(console.error);
@@ -181,7 +185,21 @@
 
   function inviteFriends() {
     const inviteMessage = `${user} has invited you to join room: ${room}. Join now!`;
-    alert(inviteMessage);
+    const invitee = prompt("Enter the name of the person you want to invite:");
+
+    if (invitee) {
+      // Save the invitation in the room data
+      db.ref("rooms/" + room + "/invitedUsers").once("value").then(snapshot => {
+        const invitedUsers = snapshot.exists() ? snapshot.val() : [];
+        if (!invitedUsers.includes(invitee)) {
+          invitedUsers.push(invitee);
+          db.ref("rooms/" + room + "/invitedUsers").set(invitedUsers);
+          alert(`${invitee} has been invited to the room!`);
+        } else {
+          alert(`${invitee} is already invited.`);
+        }
+      });
+    }
   }
 
   function uploadMedia() {
