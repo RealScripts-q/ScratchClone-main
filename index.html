@@ -47,7 +47,7 @@
     <button onclick="sendMessage()">Send</button>
   </div>
   <div>
-    <button class="invite-btn" onclick="inviteFriends()">Invite Friends</button>
+    <button id="inviteBtn" class="invite-btn" style="display:none;" onclick="inviteFriends()">Invite Friends</button>
     <input type="file" id="mediaInput" onchange="uploadMedia()" />
   </div>
 </div>
@@ -67,7 +67,7 @@
   const storage = firebase.storage();
   const auth = firebase.auth();
 
-  let user = "", room = "";
+  let user = "", room = "", roomOwner = "", isOwner = false;
 
   // User Login/Signup
   auth.onAuthStateChanged((user) => {
@@ -82,10 +82,27 @@
     if (!user || !room) return alert("Please enter name and room.");
 
     auth.signInAnonymously().then(() => {
-      document.getElementById("login").style.display = "none";
-      document.getElementById("chatBox").style.display = "flex";
-      listen();
-      updateUserList();
+      db.ref("rooms/" + room).once("value").then(snapshot => {
+        if (snapshot.exists()) {
+          roomOwner = snapshot.val().owner;
+          isOwner = roomOwner === "Prince";  // Prince is the owner
+          document.getElementById("login").style.display = "none";
+          document.getElementById("chatBox").style.display = "flex";
+          listen();
+          updateUserList();
+          setInviteButtonVisibility();
+        } else {
+          // If the room does not exist, create it and assign Prince as the owner
+          db.ref("rooms/" + room).set({ owner: "Prince" });
+          roomOwner = "Prince";
+          isOwner = true;
+          document.getElementById("login").style.display = "none";
+          document.getElementById("chatBox").style.display = "flex";
+          listen();
+          updateUserList();
+          setInviteButtonVisibility();
+        }
+      });
     }).catch(console.error);
   }
 
@@ -137,6 +154,15 @@
     });
   }
 
+  function setInviteButtonVisibility() {
+    const inviteButton = document.getElementById("inviteBtn");
+    if (!isOwner) {
+      inviteButton.style.display = "none";  // Hide the invite button for non-owners
+    } else {
+      inviteButton.style.display = "block";  // Show the invite button for owners
+    }
+  }
+
   function searchUsers() {
     const searchQuery = document.getElementById("searchBar").value.toLowerCase();
     db.ref("rooms/" + room + "/users").on("value", snapshot => {
@@ -172,9 +198,9 @@
   }
 
   function updateTypingStatus() {
-    // Placeholder for typing indicator functionality
-    console.log(user + " is typing...");
+    // Placeholder function for showing typing status
   }
 </script>
+
 </body>
 </html>
