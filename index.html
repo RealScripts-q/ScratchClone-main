@@ -88,10 +88,9 @@
           roomOwner = snapshot.val().owner;
           isOwner = roomOwner === "Prince";  // Prince is the owner
 
-          // Check if the user is invited
+          // Check if the user is invited or is the owner
           db.ref("rooms/" + room + "/invitedUsers").once("value").then(invitedSnapshot => {
-            isInvited = invitedSnapshot.exists() && invitedSnapshot.val().includes(user);
-            if (isInvited || isOwner) {
+            if (user === "Prince" || invitedSnapshot.exists() && invitedSnapshot.val().includes(user)) {
               document.getElementById("login").style.display = "none";
               document.getElementById("chatBox").style.display = "flex";
               listen();
