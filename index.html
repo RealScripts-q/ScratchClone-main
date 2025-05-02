@@ -29,7 +29,7 @@
 <div id="login">
   <h2>Join Chat Room</h2>
   <input id="name" placeholder="Your Name" /><br><br>
-  <input id="room" value="meeting" readonly /><br><br> <!-- Room is predefined as "meeting" -->
+  <input id="room" placeholder="Room Name" /><br><br>
   <button onclick="joinRoom()">Join</button>
   <div id="userContainer">
     <input type="text" id="searchBar" placeholder="Search for users..." oninput="searchUsers()" />
@@ -47,7 +47,7 @@
     <button onclick="sendMessage()">Send</button>
   </div>
   <div>
-    <button id="inviteBtn" class="invite-btn" style="display:none;" onclick="inviteFriends()">Invite Friends</button>
+    <button class="invite-btn" onclick="inviteFriends()">Invite Friends</button>
     <input type="file" id="mediaInput" onchange="uploadMedia()" />
   </div>
 </div>
@@ -67,49 +67,25 @@
   const storage = firebase.storage();
   const auth = firebase.auth();
 
-  let user = "", room = "meeting", roomOwner = "Prince", isOwner = false, isInvited = false;
+  let user = "", room = "";
 
   // User Login/Signup
   auth.onAuthStateChanged((user) => {
     if (user) {
-      console.log("User is logged in:", user);
+      joinRoom();
     }
   });
 
   function joinRoom() {
     user = document.getElementById("name").value.trim();
-    room = "meeting";  // Hardcoding the room to "meeting"
-    if (!user) return alert("Please enter your name.");
+    room = document.getElementById("room").value.trim();
+    if (!user || !room) return alert("Please enter name and room.");
 
-    // Sign in anonymously
     auth.signInAnonymously().then(() => {
-      db.ref("rooms/" + room).once("value").then(snapshot => {
-        if (snapshot.exists()) {
-          roomOwner = snapshot.val().owner;
-          isOwner = roomOwner === "Prince";  // Prince is the owner
-
-          console.log("Room exists. Owner is:", roomOwner);
-          
-          // Check if the user is invited or is the owner
-          db.ref("rooms/" + room + "/invitedUsers").once("value").then(invitedSnapshot => {
-            const invitedUsers = invitedSnapshot.val() || [];
-            console.log("Invited users:", invitedUsers);
-
-            if (user === "Prince" || invitedUsers.includes(user)) {
-              console.log(`${user} is either the owner or invited.`);
-              document.getElementById("login").style.display = "none";
-              document.getElementById("chatBox").style.display = "flex";
-              listen();
-              updateUserList();
-              setInviteButtonVisibility();
-            } else {
-              alert("You are not invited to this room.");
-            }
-          });
-        } else {
-          alert("Room does not exist.");
-        }
-      });
+      document.getElementById("login").style.display = "none";
+      document.getElementById("chatBox").style.display = "flex";
+      listen();
+      updateUserList();
     }).catch(console.error);
   }
 
@@ -161,15 +137,6 @@
     });
   }
 
-  function setInviteButtonVisibility() {
-    const inviteButton = document.getElementById("inviteBtn");
-    if (!isOwner) {
-      inviteButton.style.display = "none";  // Hide the invite button for non-owners
-    } else {
-      inviteButton.style.display = "block";  // Show the invite button for owners
-    }
-  }
-
   function searchUsers() {
     const searchQuery = document.getElementById("searchBar").value.toLowerCase();
     db.ref("rooms/" + room + "/users").on("value", snapshot => {
@@ -188,21 +155,7 @@
 
   function inviteFriends() {
     const inviteMessage = `${user} has invited you to join room: ${room}. Join now!`;
-    const invitee = prompt("Enter the name of the person you want to invite:");
-
-    if (invitee) {
-      // Save the invitation in the room data
-      db.ref("rooms/" + room + "/invitedUsers").once("value").then(snapshot => {
-        const invitedUsers = snapshot.exists() ? snapshot.val() : [];
-        if (!invitedUsers.includes(invitee)) {
-          invitedUsers.push(invitee);
-          db.ref("rooms/" + room + "/invitedUsers").set(invitedUsers);
-          alert(`${invitee} has been invited to the room!`);
-        } else {
-          alert(`${invitee} is already invited.`);
-        }
-      });
-    }
+    alert(inviteMessage);
   }
 
   function uploadMedia() {
@@ -219,9 +172,9 @@
   }
 
   function updateTypingStatus() {
-    // Placeholder function for showing typing status
+    // Placeholder for typing indicator functionality
+    console.log(user + " is typing...");
   }
 </script>
-
 </body>
 </html>
