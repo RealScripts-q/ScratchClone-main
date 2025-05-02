@@ -1,106 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MemeChat Realtime</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Private Chat</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #eef1f5;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-
-    #login, #chat {
-      padding: 20px;
-    }
-
-    #login {
-      margin: auto;
-      text-align: center;
-    }
-
-    #chat {
-      flex: 1;
-      display: none;
-      flex-direction: column;
-    }
-
-    #messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px;
-    }
-
-    .msg {
-      background: #fff;
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 10px;
-      word-wrap: break-word;
-    }
-
-    .msg b {
-      display: block;
-      margin-bottom: 4px;
-    }
-
-    #sendBox {
-      display: flex;
-      padding: 10px;
-      background: #fff;
-      gap: 8px;
-    }
-
-    #sendBox input {
-      flex: 1;
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-
-    #sendBox button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 6px;
-      background: #1d72f3;
-      color: white;
-    }
-
-    @media screen and (max-width: 600px) {
-      #sendBox button {
-        padding: 10px;
-      }
-    }
+    body { font-family: sans-serif; margin: 0; padding: 0; background: #f1f1f1; }
+    #chatBox { display: none; flex-direction: column; height: 100vh; }
+    #messages { flex: 1; overflow-y: auto; padding: 10px; }
+    .msg { background: white; margin: 5px 0; padding: 10px; border-radius: 5px; }
+    #sendArea { display: flex; padding: 10px; background: #fff; }
+    #sendArea input { flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+    #sendArea button { margin-left: 5px; padding: 10px; border: none; background: #2196f3; color: white; border-radius: 5px; }
   </style>
 </head>
 <body>
 
 <div id="login">
-  <h2>MemeChat Room</h2>
-  <input type="text" id="username" placeholder="Enter your name"><br><br>
-  <input type="text" id="room" placeholder="Room name"><br><br>
-  <button onclick="joinRoom()">Join Chat</button>
-  <p style="font-size: 0.9em;">Invite others with: <code>?room=YOURROOM</code></p>
+  <h2>Join Chat Room</h2>
+  <input id="name" placeholder="Your Name" /><br><br>
+  <input id="room" placeholder="Room Name" /><br><br>
+  <button onclick="joinRoom()">Join</button>
 </div>
 
-<div id="chat">
+<div id="chatBox">
   <div id="messages"></div>
-  <div id="sendBox">
-    <input type="text" id="messageInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMessage()">
+  <div id="sendArea">
+    <input id="messageInput" placeholder="Type your message..." />
     <button onclick="sendMessage()">Send</button>
   </div>
 </div>
 
 <script>
-  // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyB4HiV-vR8ZwqH2VIAT9HaPC--lPVN6B1U",
     authDomain: "memechat2-54d1d.firebaseapp.com",
@@ -113,48 +46,43 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  let username = "";
-  let room = "";
+  let user = "", room = "";
 
   function joinRoom() {
-    username = document.getElementById("username").value.trim();
-    room = document.getElementById("room").value.trim() || "default";
-    if (!username) return alert("Please enter your name.");
+    user = document.getElementById("name").value.trim();
+    room = document.getElementById("room").value.trim();
+    if (!user || !room) return alert("Please enter name and room.");
 
     document.getElementById("login").style.display = "none";
-    document.getElementById("chat").style.display = "flex";
-    listenForMessages();
+    document.getElementById("chatBox").style.display = "flex";
+    listen();
   }
 
   function sendMessage() {
-    const text = document.getElementById("messageInput").value.trim();
+    const input = document.getElementById("messageInput");
+    const text = input.value.trim();
     if (!text) return;
 
     const msg = {
-      sender: username,
+      user: user,
       text: text,
-      timestamp: Date.now()
+      time: Date.now()
     };
     db.ref("chats/" + room).push(msg);
-    document.getElementById("messageInput").value = "";
+    input.value = "";
   }
 
-  function listenForMessages() {
-    const msgBox = document.getElementById("messages");
-    db.ref("chats/" + room).on("child_added", (snapshot) => {
+  function listen() {
+    const messages = document.getElementById("messages");
+    db.ref("chats/" + room).on("child_added", snapshot => {
       const msg = snapshot.val();
       const div = document.createElement("div");
       div.className = "msg";
-      div.innerHTML = `<b>${msg.sender}</b>${msg.text}`;
-      msgBox.appendChild(div);
-      msgBox.scrollTop = msgBox.scrollHeight;
+      div.innerHTML = `<strong>${msg.user}</strong><br>${msg.text}`;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
     });
   }
-
-  // Prefill room from URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const preRoom = urlParams.get("room");
-  if (preRoom) document.getElementById("room").value = preRoom;
 </script>
 
 </body>
