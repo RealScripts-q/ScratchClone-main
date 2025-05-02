@@ -1,388 +1,88 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WhatsApp-like Chat</title>
+  <title>Private MemeChat</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
-    /* Basic styling for the chat application */
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      background-color: #f4f4f9;
-    }
-
-    .chat-container {
-      display: flex;
-      width: 80%;
-      height: 80%;
-      border-radius: 10px;
-      overflow: hidden;
-      background-color: white;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .contact-list {
-      width: 30%;
-      background-color: #f0f0f0;
-      padding: 20px;
-      box-sizing: border-box;
-      overflow-y: auto;
-      border-right: 1px solid #ddd;
-    }
-
-    .contact-item {
-      padding: 10px;
-      margin-bottom: 10px;
-      background-color: #e0e0e0;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-
-    .contact-item:hover {
-      background-color: #ccc;
-    }
-
-    .chat-box {
-      width: 70%;
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-
-    .header button {
-      background-color: #007BFF;
-      color: white;
-      border: none;
-      padding: 8px 15px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .messages {
-      flex-grow: 1;
-      overflow-y: auto;
-      margin-bottom: 10px;
-    }
-
-    .message {
-      padding: 10px;
-      background-color: #f1f1f1;
-      border-radius: 5px;
-      margin-bottom: 5px;
-    }
-
-    input[type="text"] {
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      width: 100%;
-      box-sizing: border-box;
-    }
-
-    button {
-      margin-top: 10px;
-    }
-
-    #nameSection {
-      text-align: center;
-    }
+    body { font-family: sans-serif; margin: 0; background: #f0f0f0; }
+    #login { padding: 20px; text-align: center; }
+    #chatArea { display: none; flex-direction: column; height: 100vh; }
+    #messages { flex: 1; overflow-y: scroll; padding: 10px; }
+    #messages div { margin-bottom: 10px; background: #fff; padding: 8px; border-radius: 8px; }
+    #sendBox { display: flex; padding: 10px; background: #fff; }
+    #sendBox input { flex: 1; padding: 10px; }
+    #sendBox button { padding: 10px; }
   </style>
 </head>
 <body>
 
-<div id="nameSection">
-  <h2>Enter Your Name and Email</h2>
-  <input type="text" id="userName" placeholder="Enter your name" />
-  <input type="email" id="userEmail" placeholder="Enter your email" />
-  <button onclick="setUserInfo()">Start Chat</button>
+<div id="login">
+  <h2>Join MemeChat Room</h2>
+  <input type="text" id="username" placeholder="Enter your name"><br><br>
+  <input type="text" id="room" placeholder="Room name (auto from invite)"><br><br>
+  <button onclick="joinRoom()">Join Chat</button>
+  <p>You can share this page with ?room=ROOM_NAME for invites.</p>
 </div>
 
-<div id="chatSection" class="chat-container" style="display:none;">
-  <div class="contact-list" id="contactList">
-    <h3>Contacts</h3>
-    <div id="contacts"></div>
-    <button onclick="createNewChat()">Create New Chat</button>
-    <button onclick="clearAllChats()">Clear All Chats</button>
-    <button onclick="clearAllContacts()">Clear All Contacts</button>
-  </div>
-  <div class="chat-box">
-    <div class="header">
-      <h3 id="chatName">Select a chat</h3>
-      <button onclick="logout()">Logout</button>
-      <button onclick="clearChatForEveryone()">Clear Chat (Everyone)</button>
-      <button onclick="clearChatForSelf()">Clear Chat (Only Me)</button>
-      <button id="banButton" onclick="banUser()" style="display:none;">Ban User</button>
-      <button id="deleteMessagesButton" onclick="deleteMessagesFromUser()" style="display:none;">Delete All Messages from User</button>
-    </div>
-    <div id="messages" class="messages"></div>
-    <input type="text" id="messageInput" placeholder="Type a message..." />
+<div id="chatArea">
+  <div id="messages"></div>
+  <div id="sendBox">
+    <input type="text" id="messageInput" placeholder="Type a message...">
     <button onclick="sendMessage()">Send</button>
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
 <script>
-// Firebase Configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyB4HiV-vR8ZwqH2VIAT9HaPC--lPVN6B1U",
-  authDomain: "memechat2-54d1d.firebaseapp.com",
-  databaseURL: "https://memechat2-54d1d-default-rtdb.firebaseio.com",
-  projectId: "memechat2-54d1d",
-  storageBucket: "memechat2-54d1d.firebasestorage.app",
-  messagingSenderId: "598300946052",
-  appId: "1:598300946052:web:7eed3b96d89933b1159cd1"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyB4HiV-vR8ZwqH2VIAT9HaPC--lPVN6B1U",
+    authDomain: "memechat2-54d1d.firebaseapp.com",
+    databaseURL: "https://memechat2-54d1d-default-rtdb.firebaseio.com",
+    projectId: "memechat2-54d1d",
+    storageBucket: "memechat2-54d1d.appspot.com",
+    messagingSenderId: "598300946052",
+    appId: "1:598300946052:web:7eed3b96d89933b1159cd1"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+  let username = "", room = "";
 
-let userName = "";
-let userEmail = "";
-let currentChat = null;
-let currentChatOwner = "";
-
-// Check if user is "realgyjs@gmail.com" and make them co-owner
-function checkIfRealYoutuberQ() {
-  if (userEmail === "realgyjs@gmail.com") {
-    document.getElementById("banButton").style.display = "inline-block";
-    document.getElementById("deleteMessagesButton").style.display = "inline-block";
+  function joinRoom() {
+    username = document.getElementById("username").value.trim();
+    room = document.getElementById("room").value.trim() || "default";
+    if (!username) return alert("Enter your name!");
+    document.getElementById("login").style.display = "none";
+    document.getElementById("chatArea").style.display = "flex";
+    startListening();
   }
-}
 
-// Set username and email, and display chat section
-function setUserInfo() {
-  userName = document.getElementById("userName").value.trim();
-  userEmail = document.getElementById("userEmail").value.trim();
-  
-  if (userName && userEmail) {
-    checkIfNameExists(userName).then(exists => {
-      if (exists) {
-        alert("This name is already taken. Please choose another name.");
-      } else {
-        // Save user to localStorage
-        localStorage.setItem("userName", userName);
-        localStorage.setItem("userEmail", userEmail);
-        
-        // Save user to Firebase
-        db.ref('users').child(userName).set({
-          email: userEmail
-        });
-
-        document.getElementById("nameSection").style.display = "none";
-        document.getElementById("chatSection").style.display = "flex";
-        loadContacts();
-        checkIfRealYoutuberQ(); // Check if the user is "RealYoutuber_Q"
-      }
-    });
-  } else {
-    alert("Please enter a valid name and email.");
+  function sendMessage() {
+    const msg = document.getElementById("messageInput").value.trim();
+    if (!msg) return;
+    const msgData = {
+      sender: username,
+      text: msg,
+      time: new Date().toLocaleTimeString()
+    };
+    db.ref("rooms/" + room).push(msgData);
+    document.getElementById("messageInput").value = "";
   }
-}
 
-// Check if the name already exists in Firebase
-function checkIfNameExists(name) {
-  return db.ref('users/' + name).once('value').then(snapshot => {
-    return snapshot.exists();
-  });
-}
-
-// Load contacts
-function loadContacts() {
-  const contactsRef = db.ref('chats');
-  contactsRef.on('value', snapshot => {
-    const chats = snapshot.val();
-    const contactsContainer = document.getElementById("contacts");
-    contactsContainer.innerHTML = "";
-    if (chats) {
-      for (const chatId in chats) {
-        const chat = chats[chatId];
-        const contactDiv = document.createElement("div");
-        contactDiv.classList.add("contact-item");
-        contactDiv.textContent = chat.name;
-        contactDiv.onclick = () => openChat(chatId, chat.name, chat.owner);
-        contactsContainer.appendChild(contactDiv);
-      }
-    }
-  });
-}
-
-// Open a chat and display messages
-function openChat(chatId, chatName, owner) {
-  const chatRef = db.ref('chats/' + chatId);
-  chatRef.once('value', snapshot => {
-    const chatData = snapshot.val();
-    if (chatData) {
-      if (chatData.members && !chatData.members.includes(userName)) {
-        alert("You have been banned from this chat.");
-        return;
-      }
-      currentChat = chatId;
-      currentChatOwner = owner;
-      document.getElementById("chatName").textContent = chatName;
-      loadMessages(chatId);
-    }
-  });
-}
-
-// Load messages with the sender's name before the message
-function loadMessages(chatId) {
-  const messagesRef = db.ref('chats/' + chatId + '/messages');
-  messagesRef.on('value', snapshot => {
-    const messages = snapshot.val();
-    const messagesContainer = document.getElementById("messages");
-    messagesContainer.innerHTML = "";
-    if (messages) {
-      for (const messageId in messages) {
-        const message = messages[messageId];
-        const messageDiv = document.createElement("div");
-        messageDiv.classList.add("message");
-
-        // Check if the sender is banned
-        if (message.sender === userName) {
-          messageDiv.textContent = "This user has been banned and their messages are cleared.";
-        } else {
-          // Create the name + message format
-          const senderName = document.createElement("strong");
-          senderName.textContent = message.sender + ": ";
-          messageDiv.appendChild(senderName);
-
-          const messageText = document.createElement("span");
-          messageText.textContent = message.text;
-          messageDiv.appendChild(messageText);
-        }
-
-        messagesContainer.appendChild(messageDiv);
-      }
-    }
-  });
-}
-
-// Send a message
-function sendMessage() {
-  const messageInput = document.getElementById("messageInput");
-  const messageText = messageInput.value.trim();
-  if (messageText && currentChat) {
-    const messageRef = db.ref('chats/' + currentChat + '/messages');
-    messageRef.push({
-      text: messageText,
-      sender: userName,
-      timestamp: Date.now()
-    });
-    messageInput.value = "";
-  }
-}
-
-// Ban user (Co-owner can ban anyone)
-function banUser() {
-  const bannedUser = prompt("Enter the username of the user to ban:");
-
-  if (bannedUser && bannedUser !== userName) {
-    const chatRef = db.ref('chats/' + currentChat);
-    chatRef.once('value', snapshot => {
-      const chatData = snapshot.val();
-      if (chatData) {
-        if (chatData.owner === userName || userEmail === "realgyjs@gmail.com") {
-          const updatedMembers = chatData.members.filter(member => member !== bannedUser);
-          chatRef.update({ members: updatedMembers });
-
-          // Clear all messages from the banned user
-          const messagesRef = db.ref('chats/' + currentChat + '/messages');
-          messagesRef.once('value', snapshot => {
-            const messages = snapshot.val();
-            if (messages) {
-              for (const messageId in messages) {
-                const message = messages[messageId];
-                if (message.sender === bannedUser) {
-                  messagesRef.child(messageId).remove();
-                }
-              }
-            }
-          });
-
-          alert(`${bannedUser} has been banned from the chat.`);
-        } else {
-          alert("Only the chat owner or co-owner can ban users.");
-        }
-      }
-    });
-  } else {
-    alert("Invalid username or you cannot ban yourself.");
-  }
-}
-
-// Automatically delete messages of banned users every second
-function autoDeleteBannedMessages() {
-  setInterval(() => {
-    if (currentChat) {
-      const chatRef = db.ref('chats/' + currentChat);
-      chatRef.once('value', snapshot => {
-        const chatData = snapshot.val();
-        if (chatData && chatData.members) {
-          chatData.members.forEach(member => {
-            const messagesRef = db.ref('chats/' + currentChat + '/messages');
-            messagesRef.once('value', snapshot => {
-              const messages = snapshot.val();
-              if (messages) {
-                for (const messageId in messages) {
-                  const message = messages[messageId];
-                  if (message.sender === member && (member === "banned_user_name")) {
-                    messagesRef.child(messageId).remove();
-                  }
-                }
-              }
-            });
-          });
-        }
-      });
-    }
-  }, 1000); // Delete every second
-}
-
-// Delete all messages from a specific user
-function deleteMessagesFromUser() {
-  const userToDelete = prompt("Enter the username of the user whose messages you want to delete:");
-
-  if (userToDelete) {
-    const chatRef = db.ref('chats/' + currentChat + '/messages');
-    chatRef.once('value', snapshot => {
-      const messages = snapshot.val();
-      if (messages) {
-        for (const messageId in messages) {
-          const message = messages[messageId];
-          if (message.sender === userToDelete) {
-            chatRef.child(messageId).remove();
-          }
-        }
-        alert(`All messages from ${userToDelete} have been deleted.`);
-      }
+  function startListening() {
+    db.ref("rooms/" + room).on("child_added", snapshot => {
+      const msg = snapshot.val();
+      const div = document.createElement("div");
+      div.innerHTML = `<b>${msg.sender}</b> <small>${msg.time}</small><br>${msg.text}`;
+      document.getElementById("messages").appendChild(div);
+      document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
     });
   }
-}
 
-// Logout
-function logout() {
-  localStorage.removeItem("userName");
-  localStorage.removeItem("userEmail");
-  window.location.reload();
-}
-
-// Start auto-delete for banned users
-autoDeleteBannedMessages();
+  // Auto-join from URL ?room=roomname
+  const urlParams = new URLSearchParams(window.location.search);
+  const prefillRoom = urlParams.get('room');
+  if (prefillRoom) document.getElementById("room").value = prefillRoom;
 </script>
 
 </body>
