@@ -72,7 +72,7 @@
   // User Login/Signup
   auth.onAuthStateChanged((user) => {
     if (user) {
-      joinRoom();
+      console.log("User is logged in:", user);
     }
   });
 
@@ -88,9 +88,15 @@
           roomOwner = snapshot.val().owner;
           isOwner = roomOwner === "Prince";  // Prince is the owner
 
+          console.log("Room exists. Owner is:", roomOwner);
+          
           // Check if the user is invited or is the owner
           db.ref("rooms/" + room + "/invitedUsers").once("value").then(invitedSnapshot => {
-            if (user === "Prince" || invitedSnapshot.exists() && invitedSnapshot.val().includes(user)) {
+            const invitedUsers = invitedSnapshot.val() || [];
+            console.log("Invited users:", invitedUsers);
+
+            if (user === "Prince" || invitedUsers.includes(user)) {
+              console.log(`${user} is either the owner or invited.`);
               document.getElementById("login").style.display = "none";
               document.getElementById("chatBox").style.display = "flex";
               listen();
