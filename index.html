@@ -13,6 +13,11 @@
       margin: 0;
       padding: 0;
       background: #f7f7f7;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    body.dark-mode {
+      background-color: #2b2b2b;
+      color: white;
     }
     #login {
       display: flex;
@@ -28,6 +33,10 @@
       background: #fff;
       border-radius: 10px;
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease;
+    }
+    #chatBox.dark-mode {
+      background: #333;
     }
     #messages {
       flex: 1;
@@ -85,6 +94,31 @@
       font-size: 20px;
       margin: 0 5px;
     }
+    #themeToggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 10px;
+      background-color: #333;
+      color: white;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    #themeToggle.dark-mode {
+      background-color: #fff;
+      color: black;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 14px;
+      }
+      #sendArea input {
+        font-size: 14px;
+      }
+      #sendArea button {
+        font-size: 14px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -114,6 +148,8 @@
   <div id="typingIndicator"></div>
 </div>
 
+<button id="themeToggle" onclick="toggleTheme()">🌙</button>
+
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyB4HiV-vR8ZwqH2VIAT9HaPC--lPVN6B1U",
@@ -130,17 +166,36 @@
 
   let user = "", room = "";
 
+  function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+    document.getElementById("chatBox").classList.toggle('dark-mode');
+    document.getElementById("themeToggle").classList.toggle('dark-mode');
+  }
+
   function joinRoom() {
     user = document.getElementById("name").value.trim();
     room = document.getElementById("room").value.trim();
     if (!user || !room) return alert("Please enter name and room.");
+    
+    // Check if the username already exists in the room
+    db.ref("rooms/" + room + "/users").once('value').then(snapshot => {
+      const users = snapshot.val();
+      if (users) {
+        const userExists = Object.values(users).includes(user);
+        if (userExists) return alert("Username already taken, please choose another one.");
+      }
+      
+      // Store username and room in localStorage
+      localStorage.setItem("username", user);
+      localStorage.setItem("room", room);
 
-    document.getElementById("login").style.display = "none";
-    document.getElementById("chatBox").style.display = "flex";
-    listen();
-    db.ref("rooms/" + room + "/users").push(user);
-    db.ref("rooms/" + room + "/messages").on('child_added', displayMessage);
-    db.ref("rooms/" + room + "/typing").on('value', showTyping);
+      document.getElementById("login").style.display = "none";
+      document.getElementById("chatBox").style.display = "flex";
+      listen();
+      db.ref("rooms/" + room + "/users").push(user);
+      db.ref("rooms/" + room + "/messages").on('child_added', displayMessage);
+      db.ref("rooms/" + room + "/typing").on('value', showTyping);
+    });
   }
 
   function sendMessage() {
@@ -214,16 +269,16 @@
     db.ref("rooms/" + room + "/typing").set(user);
   });
 
-  function listen() {
-    const messages = document.getElementById("messages");
-    db.ref("rooms/" + room + "/messages").on("child_added", snapshot => {
-      const msg = snapshot.val();
-      const div = document.createElement("div");
-      div.className = "msg";
-      div.innerHTML = `<strong>${msg.user}</strong><br>${msg.text}`;
-      messages.appendChild(div);
-      messages.scrollTop = messages.scrollHeight;
-    });
+  // Check for saved user and room in localStorage
+  if (localStorage.getItem("username") && localStorage.getItem("room")) {
+    user = localStorage.getItem("username");
+    room = localStorage.getItem("room");
+    document.getElementById("login").style.display = "none";
+    document.getElementById("chatBox").style.display = "flex";
+    listen();
+    db.ref("rooms/" + room + "/users").push(user);
+    db.ref("rooms/" + room + "/messages").on('child_added', displayMessage);
+    db.ref("rooms/" + room + "/typing").on('value', showTyping);
   }
 </script>
 
