@@ -276,9 +276,6 @@
     document.getElementById("login").style.display = "none";
     document.getElementById("chatBox").style.display = "flex";
     listen();
-    db.ref("rooms/" + room + "/users").push(user);
-    db.ref("rooms/" + room + "/messages").on('child_added', displayMessage);
-    db.ref("rooms/" + room + "/typing").on('value', showTyping);
   }
 </script>
 
