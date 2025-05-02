@@ -1,227 +1,180 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Private Chat Room</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-        }
-        #chat-container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        #message-box {
-            height: 400px;
-            overflow-y: scroll;
-            border: 1px solid #ddd;
-            background-color: white;
-            padding: 10px;
-            margin-bottom: 10px;
-        }
-        #message-box div {
-            margin-bottom: 10px;
-        }
-        #message-box div .message {
-            padding: 10px;
-            border-radius: 5px;
-            background-color: #f1f1f1;
-        }
-        #message-box div .user {
-            font-weight: bold;
-        }
-        #send-message {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        #send-button {
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        #send-button:hover {
-            background-color: #0056b3;
-        }
-        .typing-indicator {
-            font-size: 12px;
-            color: gray;
-        }
-        .online-users {
-            font-size: 14px;
-            color: #555;
-            margin-top: 10px;
-        }
-        .dark-mode {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 10px;
-            background-color: #333;
-            color: white;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-        .dark-mode.active {
-            background-color: #f1f1f1;
-            color: #333;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Private Chat Room</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; background: #f1f1f1; }
+    #login, #chatBox { display: flex; flex-direction: column; align-items: center; }
+    #messages { flex: 1; overflow-y: auto; padding: 10px; width: 80%; max-height: 60vh; }
+    .msg { background: white; margin: 5px 0; padding: 10px; border-radius: 5px; }
+    #sendArea { display: flex; width: 80%; padding: 10px; background: #fff; }
+    #sendArea input, #sendArea button { padding: 10px; border-radius: 5px; margin-right: 5px; }
+    #sendArea button { background: #2196f3; color: white; border: none; }
+    .user-list { padding: 10px; width: 80%; background: #fff; margin-top: 10px; border-radius: 5px; }
+    .user { margin: 5px; }
+    .invite-btn { padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    #searchBar { width: 80%; padding: 10px; margin-top: 10px; border-radius: 5px; }
+    .media-container { margin: 5px 0; }
+    .media-container img { max-width: 100%; max-height: 200px; }
+  </style>
 </head>
 <body>
 
-    <div id="chat-container">
-        <button id="dark-mode-btn" class="dark-mode">🌙</button>
-        <h2>Private Chat Room</h2>
-        <div id="message-box"></div>
-        <div class="typing-indicator" id="typing-indicator"></div>
-        <input type="text" id="send-message" placeholder="Type a message...">
-        <button id="send-button">Send</button>
-        <div class="online-users" id="online-users"></div>
-        <br>
-        <button id="create-room">Create Room</button>
-        <div>
-            <h3>Invite Link: <span id="invite-link"></span></h3>
-        </div>
-    </div>
+<div id="login">
+  <h2>Join Chat Room</h2>
+  <input id="name" placeholder="Your Name" /><br><br>
+  <input id="room" placeholder="Room Name" /><br><br>
+  <button onclick="joinRoom()">Join</button>
+  <div id="userContainer">
+    <input type="text" id="searchBar" placeholder="Search for users..." oninput="searchUsers()" />
+  </div>
+</div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyB4HiV-vR8ZwqH2VIAT9HaPC--lPVN6B1U",
-            authDomain: "memechat2-54d1d.firebaseapp.com",
-            databaseURL: "https://memechat2-54d1d-default-rtdb.firebaseio.com",
-            projectId: "memechat2-54d1d",
-            storageBucket: "memechat2-54d1d.firebasestorage.app",
-            messagingSenderId: "598300946052",
-            appId: "1:598300946052:web:7eed3b96d89933b1159cd1"
-        };
-        const app = firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
+<div id="chatBox" style="display:none;">
+  <div id="messages"></div>
+  <div class="user-list">
+    <h3>Current Users:</h3>
+    <ul id="userList"></ul>
+  </div>
+  <div id="sendArea">
+    <input id="messageInput" placeholder="Type your message..." oninput="updateTypingStatus()" />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+  <div>
+    <button class="invite-btn" onclick="inviteFriends()">Invite Friends</button>
+    <input type="file" id="mediaInput" onchange="uploadMedia()" />
+  </div>
+</div>
 
-        let currentRoom = new URLSearchParams(window.location.search).get('room') || '';
-        let userId = Math.random().toString(36).substring(7); // Random user ID
-        let isDarkMode = false;
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyB4HiV-vR8ZwqH2VIAT9HaPC--lPVN6B1U",
+    authDomain: "memechat2-54d1d.firebaseapp.com",
+    databaseURL: "https://memechat2-54d1d-default-rtdb.firebaseio.com",
+    projectId: "memechat2-54d1d",
+    storageBucket: "memechat2-54d1d.appspot.com",
+    messagingSenderId: "598300946052",
+    appId: "1:598300946052:web:7eed3b96d89933b1159cd1"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const storage = firebase.storage();
+  const auth = firebase.auth();
 
-        // DOM Elements
-        const messageBox = document.getElementById('message-box');
-        const sendButton = document.getElementById('send-button');
-        const sendMessage = document.getElementById('send-message');
-        const typingIndicator = document.getElementById('typing-indicator');
-        const onlineUsers = document.getElementById('online-users');
-        const inviteLink = document.getElementById('invite-link');
-        const darkModeBtn = document.getElementById('dark-mode-btn');
-        const createRoomBtn = document.getElementById('create-room');
+  let user = "", room = "";
 
-        // Initialize Chat Room
-        if (currentRoom) {
-            inviteLink.textContent = `${window.location.href}`;
-            loadMessages(currentRoom);
-            listenForTyping(currentRoom);
-            updateOnlineUsers(currentRoom);
+  // User Login/Signup
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      joinRoom();
+    }
+  });
+
+  function joinRoom() {
+    user = document.getElementById("name").value.trim();
+    room = document.getElementById("room").value.trim();
+    if (!user || !room) return alert("Please enter name and room.");
+
+    auth.signInAnonymously().then(() => {
+      document.getElementById("login").style.display = "none";
+      document.getElementById("chatBox").style.display = "flex";
+      listen();
+      updateUserList();
+    }).catch(console.error);
+  }
+
+  function sendMessage() {
+    const input = document.getElementById("messageInput");
+    const text = input.value.trim();
+    if (!text) return;
+
+    const msg = {
+      user: user,
+      text: text,
+      time: Date.now()
+    };
+    db.ref("chats/" + room).push(msg);
+    input.value = "";
+  }
+
+  function listen() {
+    const messages = document.getElementById("messages");
+    db.ref("chats/" + room).on("child_added", snapshot => {
+      const msg = snapshot.val();
+      const div = document.createElement("div");
+      div.className = "msg";
+      if (msg.text.startsWith("media:")) {
+        const mediaUrl = msg.text.split(":")[1];
+        const mediaDiv = document.createElement("div");
+        mediaDiv.className = "media-container";
+        const img = document.createElement("img");
+        img.src = mediaUrl;
+        mediaDiv.appendChild(img);
+        div.appendChild(mediaDiv);
+      } else {
+        div.innerHTML = `<strong>${msg.user}</strong><br>${msg.text}`;
+      }
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    });
+  }
+
+  function updateUserList() {
+    const userList = document.getElementById("userList");
+    db.ref("rooms/" + room + "/users").on("value", snapshot => {
+      userList.innerHTML = "";
+      snapshot.forEach(childSnapshot => {
+        const userItem = document.createElement("li");
+        userItem.textContent = childSnapshot.val().name;
+        userList.appendChild(userItem);
+      });
+    });
+  }
+
+  function searchUsers() {
+    const searchQuery = document.getElementById("searchBar").value.toLowerCase();
+    db.ref("rooms/" + room + "/users").on("value", snapshot => {
+      const userList = document.getElementById("userList");
+      userList.innerHTML = "";
+      snapshot.forEach(childSnapshot => {
+        const name = childSnapshot.val().name.toLowerCase();
+        if (name.includes(searchQuery)) {
+          const userItem = document.createElement("li");
+          userItem.textContent = childSnapshot.val().name;
+          userList.appendChild(userItem);
         }
+      });
+    });
+  }
 
-        // Dark Mode Toggle
-        darkModeBtn.addEventListener('click', () => {
-            isDarkMode = !isDarkMode;
-            document.body.style.backgroundColor = isDarkMode ? '#333' : '#f5f5f5';
-            document.body.style.color = isDarkMode ? '#fff' : '#333';
-            darkModeBtn.classList.toggle('active', isDarkMode);
-        });
+  function inviteFriends() {
+    const inviteMessage = `${user} has invited you to join room: ${room}. Join now!`;
+    alert(inviteMessage);
+  }
 
-        // Send Message
-        sendButton.addEventListener('click', () => {
-            if (sendMessage.value.trim() !== '') {
-                const message = sendMessage.value.trim();
-                const timestamp = new Date().toLocaleTimeString();
-                sendMessage.value = '';
+  function uploadMedia() {
+    const fileInput = document.getElementById("mediaInput");
+    const file = fileInput.files[0];
+    if (!file) return;
 
-                database.ref('rooms/' + currentRoom).push({
-                    userId: userId,
-                    message: message,
-                    timestamp: timestamp
-                });
-            }
-        });
+    const storageRef = storage.ref("media/" + file.name);
+    storageRef.put(file).then(snapshot => {
+      snapshot.ref.getDownloadURL().then(url => {
+        db.ref("chats/" + room).push({ user, text: "media:" + url, time: Date.now() });
+      });
+    });
+  }
 
-        // Listen for New Messages
-        function loadMessages(room) {
-            const roomRef = database.ref('rooms/' + room);
-            roomRef.on('child_added', (snapshot) => {
-                const messageData = snapshot.val();
-                const messageDiv = document.createElement('div');
-                messageDiv.innerHTML = `<div><span class="user">${messageData.userId}</span> <span class="timestamp">(${messageData.timestamp})</span></div>
-                                        <div class="message">${messageData.message}</div>`;
-                messageBox.appendChild(messageDiv);
-                messageBox.scrollTop = messageBox.scrollHeight; // Auto-scroll to the latest message
-            });
-        }
-
-        // Typing Indicator
-        sendMessage.addEventListener('input', () => {
-            if (sendMessage.value.trim() !== '') {
-                database.ref('rooms/' + currentRoom + '/typing/' + userId).set(true);
-            } else {
-                database.ref('rooms/' + currentRoom + '/typing/' + userId).remove();
-            }
-        });
-
-        function listenForTyping(room) {
-            const typingRef = database.ref('rooms/' + room + '/typing');
-            typingRef.on('value', (snapshot) => {
-                let usersTyping = [];
-                snapshot.forEach((childSnapshot) => {
-                    if (childSnapshot.val()) {
-                        usersTyping.push(childSnapshot.key);
-                    }
-                });
-
-                if (usersTyping.length > 0) {
-                    typingIndicator.textContent = `${usersTyping.join(', ')} is typing...`;
-                } else {
-                    typingIndicator.textContent = '';
-                }
-            });
-        }
-
-        // Online Users Counter
-        function updateOnlineUsers(room) {
-            const onlineRef = database.ref('rooms/' + room + '/online');
-            onlineRef.on('value', (snapshot) => {
-                onlineUsers.textContent = `Online Users: ${snapshot.numChildren()}`;
-            });
-
-            database.ref('rooms/' + room + '/online/' + userId).set(true);
-            window.addEventListener('beforeunload', () => {
-                database.ref('rooms/' + room + '/online/' + userId).remove();
-            });
-        }
-
-        // Create Room and Generate Invite Link
-        createRoomBtn.addEventListener('click', () => {
-            const roomName = prompt("Enter a name for your room");
-            if (roomName) {
-                currentRoom = roomName;
-                window.history.pushState(null, null, `?room=${roomName}`);
-                inviteLink.textContent = `${window.location.href}`;
-                loadMessages(roomName);
-                listenForTyping(roomName);
-                updateOnlineUsers(roomName);
-            }
-        });
-    </script>
-
+  function updateTypingStatus() {
+    // Placeholder for typing indicator functionality
+    console.log(user + " is typing...");
+  }
+</script>
 </body>
 </html>
