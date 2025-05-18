@@ -1,91 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Live Stream Dashboard</title>
-<style>
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: 'Segoe UI', sans-serif; background:#121212; color:#eee; }
-  #login-screen, #dashboard, #stream-view { display:none; height:100vh; padding:20px; }
-  button {
-    background: #3a3a3a; border:none; color:#eee; padding:10px 15px;
-    cursor:pointer; border-radius:4px; font-weight:600; margin:5px 0;
-    transition: background 0.3s ease;
-  }
-  button:hover { background: #007bff; }
-  #streams-list { display:flex; flex-wrap:wrap; gap:15px; margin-top:10px; }
-  .stream-card {
-    background:#222; padding:10px; width:220px; border-radius:6px;
-    cursor:pointer; box-shadow: 0 0 10px #000;
-    display:flex; flex-direction: column;
-  }
-  .stream-card img {
-    width: 100%; height: 120px; object-fit: cover; border-radius: 4px;
-  }
-  .stream-card h3 {
-    margin:8px 0 4px 0; font-size: 1.1rem; color:#00ff99;
-  }
-  .stream-card p {
-    margin:0; font-size: 0.9rem; color:#ccc; flex-grow:1;
-  }
-  #create-stream-form {
-    background:#222; padding:15px; border-radius:6px; margin-top:15px;
-    max-width: 400px;
-  }
-  #create-stream-form input, #create-stream-form textarea {
-    width:100%; padding:8px; margin-bottom:10px; border:none; border-radius:4px;
-    background:#333; color:#eee; font-size: 1rem;
-  }
-  #create-stream-form label { font-weight: 600; margin-bottom: 5px; display: block; }
-  #chat {
-    margin-top: 15px; background:#1e1e1e; border-radius:6px; padding: 10px;
-    max-width: 600px;
-    display: flex; flex-direction: column; height: 60vh;
-  }
-  #messages {
-    flex: 1; overflow-y: auto; background: #121212; border-radius: 6px; padding: 12px;
-    font-size: 14px; line-height: 1.4; box-shadow: inset 0 0 10px #000; margin-bottom: 10px;
-  }
-  .chat-message {
-    margin-bottom: 8px;
-  }
-  .chat-message strong {
-    color: #00ff99;
-  }
-  #input-area {
-    display: flex; gap: 8px;
-  }
-  #msgInput {
-    flex: 1; padding: 8px 12px; border-radius: 6px; border: none; background: #222; color: #eee;
-  }
-  #msgInput:focus { outline:none; background:#333; }
-  #sendBtn {
-    padding: 8px 20px; border-radius: 6px; background: #007bff; font-weight: 600; border:none;
-    cursor: pointer;
-  }
-  #sendBtn:hover { background: #0056b3; }
-  #streamVideo {
-    width: 100%; max-height: 320px; background: #000; margin-bottom: 10px;
-    border-radius: 6px;
-  }
-  #logoutBtn {
-    position: fixed; top: 10px; right: 10px; background:#d33; border:none; border-radius:4px;
-    padding: 8px 12px; font-weight: 600; cursor:pointer;
-  }
-  #ownerControls {
-    margin-bottom: 10px;
-  }
-  #thumbnailPreview {
-    width: 100%; max-height: 150px; object-fit: cover; margin-bottom: 10px;
-    border-radius: 6px;
-    display: none;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>Live Stream Dashboard</title>
+  <style>
+    /* Basic styles for layout */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+    }
+    #login-screen, #dashboard, #stream-view {
+      display: none;
+      padding: 20px;
+    }
+    #dashboard, #stream-view {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    #streams-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-top: 10px;
+    }
+    .stream-card {
+      background: #222;
+      padding: 10px;
+      width: 220px;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 0 10px #000;
+      display: flex;
+      flex-direction: column;
+    }
+    .stream-card img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    .stream-card h3 {
+      margin: 8px 0 4px 0;
+      font-size: 1.1rem;
+      color: #00ff99;
+    }
+    .stream-card p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #ccc;
+      flex-grow: 1;
+    }
+    #create-stream-form {
+      background: #222;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 15px;
+      max-width: 400px;
+    }
+    #create-stream-form input, #create-stream-form textarea {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: none;
+      border-radius: 4px;
+      background: #333;
+      color: #eee;
+      font-size: 1rem;
+    }
+    #create-stream-form label {
+      font-weight: 600;
+      margin-bottom: 5px;
+      display: block;
+    }
+    #chat {
+      background: #1e1e1e;
+      border-radius: 6px;
+      padding: 10px;
+      width: 300px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      background: #121212;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 14px;
+      line-height: 1.4;
+      box-shadow: inset 0 0 10px #000;
+      margin-bottom: 10px;
+    }
+    .chat-message {
+      margin-bottom: 8px;
+    }
+    .chat-message strong {
+      color: #00ff99;
+    }
+    #input-area {
+      display: flex;
+      gap: 8px;
+    }
+    #msgInput {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: none;
+      background: #222;
+      color: #eee;
+    }
+    #msgInput:focus {
+      outline: none;
+      background: #333;
+    }
+    #sendBtn {
+      padding: 8px 20px;
+      border-radius: 6px;
+      background: #007bff;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+    #sendBtn:hover {
+      background: #0056b3;
+    }
+    #streamVideo {
+      width: 100%;
+      max-height: 480px;
+      background: #000;
+      margin-bottom: 10px;
+    }
+    #logoutBtn {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: #d33;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #stream-container {
+      display: flex;
+      flex: 1;
+    }
+    #video-section {
+      flex: 1;
+      padding: 10px;
+    }
+    #controls {
+      margin-top: 10px;
+    }
+    button {
+      background: #3a3a3a;
+      border: none;
+      color: #eee;
+      padding: 10px 15px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-weight: 600;
+      margin: 5px 0;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #007bff;
+    }
+  </style>
 </head>
 <body>
 
 <!-- LOGIN SCREEN -->
-<div id="login-screen" style="display:flex; align-items:center; justify-content:center;">
+<div id="login-screen">
   <button id="loginBtn">Sign in with Google</button>
 </div>
 
@@ -101,9 +191,8 @@
     <input id="streamName" type="text" placeholder="Enter stream name" />
     <label for="streamDesc">Description</label>
     <textarea id="streamDesc" rows="3" placeholder="Stream description"></textarea>
-    <label for="streamThumbFile">Thumbnail Image</label>
-    <input id="streamThumbFile" type="file" accept="image/*" />
-    <img id="thumbnailPreview" alt="Thumbnail preview" />
+    <label for="streamThumb">Thumbnail Image</label>
+    <input id="streamThumb" type="file" accept="image/*" />
     <button id="createStreamBtn">Create Stream</button>
   </div>
 
@@ -114,20 +203,20 @@
 <div id="stream-view">
   <button id="backBtn">← Back to Dashboard</button>
   <h2 id="streamTitle"></h2>
-  <video id="streamVideo" autoplay playsinline muted></video>
-  <p id="streamDescText"></p>
-
-  <!-- Owner controls to toggle cam/mic -->
-  <div id="ownerControls" style="display:none;">
-    <button id="toggleCamBtn">Toggle Camera</button>
-    <button id="toggleMicBtn">Toggle Microphone</button>
-  </div>
-
-  <div id="chat">
-    <div id="messages"><em>Loading chat...</em></div>
-    <div id="input-area" style="display:none;">
-      <input id="msgInput" type="text" placeholder="Type your message..." autocomplete="off" />
-      <button id="sendBtn">Send</button>
+  <div id="stream-container">
+    <div id="video-section">
+      <video id="streamVideo" controls autoplay muted></video>
+      <div id="controls" style="display:none;">
+        <button id="toggleMicBtn">Toggle Mic</button>
+        <button id="toggleCamBtn">Toggle Camera</button>
+      </div>
+    </div>
+    <div id="chat">
+      <div id="messages"><em>Loading chat...</em></div>
+      <div id="input-area" style="display:none;">
+        <input id="msgInput" type="text" placeholder="Type your message..." autocomplete="off" />
+        <button id="sendBtn">Send</button>
+      </div>
     </div>
   </div>
 </div>
@@ -139,7 +228,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
 
 <script>
-  // Firebase config (replace with your own)
+  // Config - replace with your Firebase project config
   const firebaseConfig = {
     apiKey: "AIzaSyCq74S-8b4maDXEKkDXwoaz28Y_Qf0N_34",
     authDomain: "livestreamchat-268a9.firebaseapp.com",
@@ -166,8 +255,7 @@
   const createForm = document.getElementById('create-stream-form');
   const streamNameInput = document.getElementById('streamName');
   const streamDescInput = document.getElementById('streamDesc');
-  const streamThumbFileInput = document.getElementById('streamThumbFile');
-  const thumbnailPreview = document.getElementById('thumbnailPreview');
+  const streamThumbInput = document.getElementById('streamThumb');
   const createStreamBtn = document.getElementById('createStreamBtn');
   const logoutBtn = document.getElementById('logoutBtn');
 
@@ -176,276 +264,15 @@
   const streamTitle = document.getElementById('streamTitle');
   const streamDescText = document.getElementById('streamDescText');
   const streamVideo = document.getElementById('streamVideo');
-  const ownerControls = document.getElementById('ownerControls');
-  const toggleCamBtn = document.getElementById('toggleCamBtn');
-  const toggleMicBtn = document.getElementById('toggleMicBtn');
 
-  const chatMessages = document.getElementById('messages');
+  // Chat UI
+  const messagesDiv = document.getElementById('messages');
+  const inputArea = document.getElementById('input-area');
   const msgInput = document.getElementById('msgInput');
   const sendBtn = document.getElementById('sendBtn');
-  const inputArea = document.getElementById('input-area');
 
-  let currentUser = null;
-  let currentStreamId = null;
-  let isOwner = false;
-
-  let localStream = null;
-  let camEnabled = true;
-  let micEnabled = true;
-
-  // Show thumbnail preview on file select
-  streamThumbFileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) {
-      thumbnailPreview.style.display = 'none';
-      thumbnailPreview.src = '';
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      thumbnailPreview.src = evt.target.result;
-      thumbnailPreview.style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-  });
-
-  // Login flow
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(console.error);
-  };
-
-  logoutBtn.onclick = () => {
-    auth.signOut();
-  };
-
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if (user) {
-      loginScreen.style.display = 'none';
-      dashboard.style.display = 'block';
-      streamView.style.display = 'none';
-
-      isOwner = user.email.toLowerCase() === OWNER_EMAIL.toLowerCase();
-      createForm.style.display = isOwner ? 'block' : 'none';
-
-      loadStreams();
-    } else {
-      loginScreen.style.display = 'flex';
-      dashboard.style.display = 'none';
-      streamView.style.display = 'none';
-    }
-  });
-
-  // Load all streams
-  function loadStreams() {
-    streamsList.innerHTML = 'Loading streams...';
-    db.ref('streams').on('value', snapshot => {
-      const streams = snapshot.val();
-      streamsList.innerHTML = '';
-      if (!streams) {
-        streamsList.innerHTML = '<p>No streams found.</p>';
-        return;
-      }
-      Object.entries(streams).forEach(([id, stream]) => {
-        const card = document.createElement('div');
-        card.className = 'stream-card';
-        card.dataset.id = id;
-
-        const thumbImg = document.createElement('img');
-        thumbImg.src = stream.thumbnail || 'https://via.placeholder.com/220x120?text=No+Thumbnail';
-        card.appendChild(thumbImg);
-
-        const title = document.createElement('h3');
-        title.textContent = stream.name;
-        card.appendChild(title);
-
-        const desc = document.createElement('p');
-        desc.textContent = stream.description;
-        card.appendChild(desc);
-
-        card.onclick = () => openStream(id, stream);
-        streamsList.appendChild(card);
-      });
-    });
-  }
-
-  // Create stream
-  createStreamBtn.onclick = async () => {
-    const name = streamNameInput.value.trim();
-    const desc = streamDescInput.value.trim();
-    const file = streamThumbFileInput.files[0];
-
-    if (!name) {
-      alert("Stream name is required");
-      return;
-    }
-    if (!file) {
-      alert("Please select a thumbnail image");
-      return;
-    }
-
-    createStreamBtn.disabled = true;
-    createStreamBtn.textContent = "Creating...";
-
-    try {
-      // Upload thumbnail to Firebase Storage
-      const storageRef = storage.ref();
-      const thumbRef = storageRef.child(`thumbnails/${Date.now()}_${file.name}`);
-      const snapshot = await thumbRef.put(file);
-      const thumbnailURL = await snapshot.ref.getDownloadURL();
-
-      // Save stream data to DB
-      const newStreamRef = db.ref('streams').push();
-      await newStreamRef.set({
-        name,
-        description: desc,
-        ownerEmail: currentUser.email,
-        thumbnail: thumbnailURL,
-        createdAt: Date.now(),
-      });
-
-      streamNameInput.value = '';
-      streamDescInput.value = '';
-      streamThumbFileInput.value = '';
-      thumbnailPreview.style.display = 'none';
-      thumbnailPreview.src = '';
-
-      alert('Stream created!');
-    } catch (err) {
-      console.error(err);
-      alert("Failed to create stream");
-    } finally {
-      createStreamBtn.disabled = false;
-      createStreamBtn.textContent = "Create Stream";
-    }
-  };
-
-  // Open a stream view
-  async function openStream(id, stream) {
-    currentStreamId = id;
-    dashboard.style.display = 'none';
-    streamView.style.display = 'block';
-
-    streamTitle.textContent = stream.name;
-    streamDescText.textContent = stream.description;
-    chatMessages.innerHTML = '<em>Loading chat...</em>';
-    inputArea.style.display = currentUser ? 'flex' : 'none';
-
-    isOwner = currentUser && currentUser.email.toLowerCase() === stream.ownerEmail.toLowerCase();
-
-    if (isOwner) {
-      ownerControls.style.display = 'block';
-      await startLocalStream();
-    } else {
-      ownerControls.style.display = 'none';
-      stopLocalStream();
-      // For demo, show thumbnail image as static video placeholder for viewers
-      streamVideo.srcObject = null;
-      streamVideo.src = stream.thumbnail || '';
-      streamVideo.controls = false;
-      streamVideo.autoplay = false;
-      streamVideo.muted = true;
-      streamVideo.style.background = '#000 url("' + (stream.thumbnail || '') + '") center center / cover no-repeat';
-    }
-
-    // Load chat messages listener
-    setupChat(id);
-  }
-
-  // Back to dashboard
-  backBtn.onclick = () => {
-    stopLocalStream();
-    streamView.style.display = 'none';
-    dashboard.style.display = 'block';
-    currentStreamId = null;
-    chatMessages.innerHTML = '';
-    inputArea.style.display = 'none';
-  };
-
-  // Chat message send
-  sendBtn.onclick = sendMessage;
-  msgInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') sendMessage();
-  });
-
-  function sendMessage() {
-    const text = msgInput.value.trim();
-    if (!text || !currentStreamId || !currentUser) return;
-    const msgData = {
-      text,
-      sender: currentUser.displayName || currentUser.email,
-      timestamp: Date.now(),
-    };
-    db.ref(`messages/${currentStreamId}`).push(msgData);
-    msgInput.value = '';
-  }
-
-  // Listen for chat messages
-  function setupChat(streamId) {
-    const msgRef = db.ref(`messages/${streamId}`);
-    msgRef.off();
-    msgRef.on('value', snapshot => {
-      const messages = snapshot.val();
-      chatMessages.innerHTML = '';
-      if (!messages) {
-        chatMessages.innerHTML = '<em>No messages yet.</em>';
-        return;
-      }
-      Object.values(messages).forEach(msg => {
-        const div = document.createElement('div');
-        div.className = 'chat-message';
-        div.innerHTML = `<strong>${escapeHtml(msg.sender)}:</strong> ${escapeHtml(msg.text)}`;
-        chatMessages.appendChild(div);
-      });
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    });
-  }
-
-  // Escape HTML for chat safety
-  function escapeHtml(text) {
-    return text.replace(/[&<>"']/g, c =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
-    );
-  }
-
-  // Local camera/mic stream setup for owner
-  async function startLocalStream() {
-    if (localStream) return;
-    try {
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      streamVideo.srcObject = localStream;
-      camEnabled = true;
-      micEnabled = true;
-      toggleCamBtn.textContent = "Turn Camera Off";
-      toggleMicBtn.textContent = "Turn Microphone Off";
-    } catch (err) {
-      alert("Failed to access camera/microphone");
-      console.error(err);
-    }
-  }
-
-  function stopLocalStream() {
-    if (!localStream) return;
-    localStream.getTracks().forEach(t => t.stop());
-    localStream = null;
-    streamVideo.srcObject = null;
-  }
-
-  toggleCamBtn.onclick = () => {
-    if (!localStream) return;
-    camEnabled = !camEnabled;
-    localStream.getVideoTracks().forEach(track => track.enabled = camEnabled);
-    toggleCamBtn.textContent = camEnabled ? "Turn Camera Off" : "Turn Camera On";
-  };
-
-  toggleMicBtn.onclick = () => {
-    if (!localStream) return;
-    micEnabled = !micEnabled;
-    localStream.getAudioTracks().forEach(track => track.enabled = micEnabled);
-    toggleMicBtn.textContent = micEnabled ? "Turn Microphone Off" : "Turn Microphone On";
-  };
-</script>
-
-</body>
-</html>
+  const controlsDiv = document.getElementById('controls');
+  const toggleMicBtn = document.getElementById('toggleMicBtn');
+  const toggleCamBtn = document.getElementById('toggle
+::contentReference[oaicite:25]{index=25}
+ 
