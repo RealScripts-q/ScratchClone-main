@@ -1,375 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Live Stream + Chat Example</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #222; color: #ddd; margin: 0; padding: 20px; }
-    #createLiveForm, #livePreviewOwner, #livePreviewUser, #inputArea, #smallLivePreview {
-      margin-bottom: 20px;
-    }
-    #createLiveForm, #livePreviewOwner, #livePreviewUser {
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    input, textarea {
-      padding: 8px; border-radius: 4px; border: none; font-size: 14px;
-    }
-    button {
-      padding: 8px 16px; border: none; border-radius: 6px;
-      cursor: pointer; font-weight: 600;
-      background: #00aaff; color: #fff;
-      transition: background-color 0.3s;
-    }
-    button:hover {
-      background: #0077aa;
-    }
-    video {
-      width: 100%; max-width: 600px; border-radius: 8px; background: #000;
-    }
-    #messagesDiv {
-      background: #111; border-radius: 6px; padding: 10px; height: 200px; overflow-y: auto;
-      font-size: 14px;
-    }
-    .chat-message {
-      margin-bottom: 6px;
-    }
-    #inputArea {
-      display: flex; gap: 8px;
-    }
-    #inputArea input {
-      flex: 1;
-    }
-    #smallLivePreview {
-      cursor: pointer; background: #333; padding: 12px; border-radius: 8px;
-      max-width: 320px; box-shadow: 0 0 10px #00aaff;
-    }
-    #smallLivePreview h4 {
-      margin: 0 0 6px 0; font-weight: 700; color: #0ff;
-    }
-    #smallLivePreview p {
-      margin: 0;
-      color: #aad;
-      font-size: 13px;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Screen Stream + Chat + Dashboard</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0; padding: 0;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+  #dashboard {
+    width: 300px;
+    background: #222;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+  }
+  #dashboard button {
+    margin: 10px 0;
+    padding: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  #user-info {
+    margin-bottom: 15px;
+  }
+  #stream-container {
+    flex-grow: 1;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+  }
+  video {
+    width: 100%;
+    height: 50vh;
+    background: black;
+  }
+  #chat {
+    flex-grow: 1;
+    background: #111;
+    color: white;
+    overflow-y: auto;
+    padding: 10px;
+  }
+  #chat input {
+    width: calc(100% - 20px);
+    padding: 8px;
+    font-size: 1rem;
+  }
+  .chat-message {
+    margin-bottom: 10px;
+  }
+  .chat-message strong {
+    color: #ffb400;
+  }
+</style>
 </head>
 <body>
 
-  <h2>Live Stream Demo</h2>
+<div id="dashboard">
+  <div id="user-info">Not signed in</div>
+  <button id="sign-in-btn">Sign in with Google</button>
+  <button id="sign-out-btn" style="display:none;">Sign Out</button>
+  <button id="start-stream-btn" disabled>Start Screen Share</button>
+  <button id="stop-stream-btn" disabled>Stop Screen Share</button>
 
-  <!-- Create live stream form (owner) -->
-  <div id="createLiveForm">
-    <input id="liveNameInput" placeholder="Enter stream name" />
-    <textarea id="liveDescInput" placeholder="Enter stream description" rows="2"></textarea>
-    <button id="createLiveBtn">Start Live Stream</button>
+  <div style="margin-top: auto;">
+    <input id="chat-input" placeholder="Type a message..." disabled />
   </div>
+</div>
 
-  <!-- Owner live preview (no name/desc shown) -->
-  <div id="livePreviewOwner" style="display:none; flex-direction: column; gap: 10px;">
-    <video id="ownerStreamVideo" autoplay muted playsinline></video>
-  </div>
+<div id="stream-container">
+  <video id="screen-video" autoplay muted></video>
+  <div id="chat"></div>
+</div>
 
-  <!-- Viewer live preview (no name/desc on main video) -->
-  <div id="livePreviewUser" style="display:none; flex-direction: column; gap: 10px;">
-    <video id="userStreamVideo" autoplay muted playsinline></video>
-  </div>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-  <!-- Chat messages -->
-  <div id="messagesDiv"><em>Create a live stream to start chatting</em></div>
+<script>
+  // Your Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCq74S-8b4maDXEKkDXwoaz28Y_Qf0N_34",
+    authDomain: "livestreamchat-268a9.firebaseapp.com",
+    databaseURL: "https://livestreamchat-268a9-default-rtdb.firebaseio.com",
+    projectId: "livestreamchat-268a9",
+    storageBucket: "livestreamchat-268a9.firebasestorage.app",
+    messagingSenderId: "761482927725",
+    appId: "1:761482927725:web:7d525941da69c424bb6964"
+  };
 
-  <!-- Chat input -->
-  <div id="inputArea" style="display:none;">
-    <input id="chatInput" placeholder="Type your message..." />
-    <button id="sendBtn">Send</button>
-  </div>
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
 
-  <!-- Small preview card with stream name & description -->
-  <div id="smallLivePreview" style="display:none;" title="Click to watch replay">
-    <h4 id="smallPreviewName"></h4>
-    <p id="smallPreviewDesc"></p>
-    <p style="font-size: 12px; color:#aaffcc; margin-top:6px;">Click to watch stream replay</p>
-  </div>
+  const signInBtn = document.getElementById('sign-in-btn');
+  const signOutBtn = document.getElementById('sign-out-btn');
+  const userInfo = document.getElementById('user-info');
+  const startStreamBtn = document.getElementById('start-stream-btn');
+  const stopStreamBtn = document.getElementById('stop-stream-btn');
+  const chatInput = document.getElementById('chat-input');
+  const chatDiv = document.getElementById('chat');
+  const screenVideo = document.getElementById('screen-video');
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  let currentUser = null;
+  let screenStream = null;
 
-  <script>
-    // Your Firebase config here:
-    const firebaseConfig = {
-  apiKey: "AIzaSyCq74S-8b4maDXEKkDXwoaz28Y_Qf0N_34",
-  authDomain: "livestreamchat-268a9.firebaseapp.com",
-  databaseURL: "https://livestreamchat-268a9-default-rtdb.firebaseio.com",
-  projectId: "livestreamchat-268a9",
-  storageBucket: "livestreamchat-268a9.firebasestorage.app",
-  messagingSenderId: "761482927725",
-  appId: "1:761482927725:web:7d525941da69c424bb6964"
-};
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+  // Sign in with Google
+  signInBtn.onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+      .catch(console.error);
+  };
 
-    // Elements
-    const createLiveForm = document.getElementById('createLiveForm');
-    const liveNameInput = document.getElementById('liveNameInput');
-    const liveDescInput = document.getElementById('liveDescInput');
-    const createLiveBtn = document.getElementById('createLiveBtn');
+  // Sign out
+  signOutBtn.onclick = () => {
+    auth.signOut();
+  };
 
-    const livePreviewOwner = document.getElementById('livePreviewOwner');
-    const ownerStreamVideo = document.getElementById('ownerStreamVideo');
-
-    const livePreviewUser = document.getElementById('livePreviewUser');
-    const userStreamVideo = document.getElementById('userStreamVideo');
-
-    const messagesDiv = document.getElementById('messagesDiv');
-    const inputArea = document.getElementById('inputArea');
-    const chatInput = document.getElementById('chatInput');
-    const sendBtn = document.getElementById('sendBtn');
-
-    const smallLivePreview = document.getElementById('smallLivePreview');
-    const smallPreviewName = document.getElementById('smallPreviewName');
-    const smallPreviewDesc = document.getElementById('smallPreviewDesc');
-
-    // Owner hardcoded userId for demo
-    const OWNER_USER_ID = "ownerUserId";
-
-    // For demo, prompt user ID (simulate login)
-    let currentUser = { uid: prompt("Enter your user ID (type ownerUserId for owner)") };
-
-    let isOwner = currentUser.uid === OWNER_USER_ID;
-
-    // Stream ID fixed for simplicity
-    const streamId = 'currentStream';
-
-    // Store stream state
-    let liveActive = false;
-    let streamEnded = false;
-    let ownerStream = null;
-
-    // References
-    let liveMessagesRef = null;
-
-    // END STREAM button for owner
-    const endStreamBtn = document.createElement('button');
-    endStreamBtn.textContent = 'End Stream';
-    endStreamBtn.style.background = '#aa2222';
-    endStreamBtn.style.marginTop = '12px';
-    endStreamBtn.style.fontWeight = '700';
-    endStreamBtn.style.color = '#eee';
-    endStreamBtn.style.border = 'none';
-    endStreamBtn.style.padding = '8px 20px';
-    endStreamBtn.style.borderRadius = '6px';
-    endStreamBtn.style.cursor = 'pointer';
-    createLiveForm.appendChild(endStreamBtn);
-    endStreamBtn.style.display = 'none';
-
-    endStreamBtn.onclick = async () => {
-      await endStream();
-      alert('Stream ended');
-      resetToDashboard();
-    };
-
-    // Start live stream (owner)
-    createLiveBtn.onclick = async () => {
-      const name = liveNameInput.value.trim();
-      const desc = liveDescInput.value.trim();
-
-      if (!name) {
-        alert('Please enter a stream name');
-        return;
-      }
-
-      // Save stream info + live=true
-      await db.ref('streams/' + streamId).set({
-        name,
-        description: desc,
-        owner: currentUser.uid,
-        live: true,
-        startedAt: Date.now(),
-      });
-
-      liveNameInput.value = '';
-      liveDescInput.value = '';
-
-      createLiveForm.style.display = 'none';
-      livePreviewOwner.style.display = 'flex';
-      endStreamBtn.style.display = 'inline-block';
-
-      // Hide chat input initially for owner
-      inputArea.style.display = 'none';
-      messagesDiv.innerHTML = '';
-
-      try {
-        ownerStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-        ownerStreamVideo.srcObject = ownerStream;
-      } catch (err) {
-        alert('Failed to start screen sharing: ' + err.message);
-        await endStream();
-        resetToDashboard();
-        return;
-      }
-
-      liveActive = true;
-      streamEnded = false;
-      listenForMessages();
-      setupViewerCount();
-    };
-
-    // End stream function
-    async function endStream() {
-      if (!liveActive) return;
-
-      if (ownerStream) {
-        ownerStream.getTracks().forEach(t => t.stop());
-        ownerStream = null;
-      }
-
-      await db.ref('streams/' + streamId + '/live').set(false);
-      liveActive = false;
-      streamEnded = true;
-      endStreamBtn.style.display = 'none';
-    }
-
-    // Reset UI to dashboard
-    function resetToDashboard() {
-      createLiveForm.style.display = 'flex';
-      livePreviewOwner.style.display = 'none';
-      livePreviewUser.style.display = 'none';
-      inputArea.style.display = 'none';
-      messagesDiv.innerHTML = '<em>Create a live stream to start chatting</em>';
-      smallLivePreview.style.display = 'none';
-      streamEnded = true;
-      liveActive = false;
-    }
-
-    // Add message to chat UI
-    function addMessageToChat(msg) {
-      const div = document.createElement('div');
-      div.className = 'chat-message';
-      div.innerHTML = `<strong>${msg.userName}</strong>: <span>${msg.text}</span>`;
-      messagesDiv.appendChild(div);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    // Listen for messages live or replay
-    function listenForMessages() {
-      if (liveMessagesRef) liveMessagesRef.off();
-
-      liveMessagesRef = db.ref('streams/' + streamId + '/messages');
-
-      if (!streamEnded) {
-        messagesDiv.innerHTML = '';
-        inputArea.style.display = 'flex';
-
-        liveMessagesRef.on('child_added', (snap) => {
-          const msg = snap.val();
-          addMessageToChat(msg);
-        });
-      } else {
-        inputArea.style.display = 'none';
-      }
-    }
-
-    // Send chat message
-    sendBtn.onclick = () => {
-      const text = chatInput.value.trim();
-      if (!text) return;
-
-      const msg = {
-        userId: currentUser.uid,
-        userName: isOwner ? 'Owner' : 'Viewer',
-        text,
-        timestamp: Date.now(),
-      };
-
-      db.ref('streams/' + streamId + '/messages').push(msg);
-      chatInput.value = '';
-    };
-
-    // Setup viewer count or other viewer listeners (optional)
-    function setupViewerCount() {
-      // Could add viewer count listener here
-    }
-
-    // Setup UI for viewer
-    async function setupViewer() {
-      createLiveForm.style.display = 'none';
-      livePreviewOwner.style.display = 'none';
-
-      // Listen for stream info changes
-      db.ref('streams/' + streamId).on('value', (snap) => {
-        const streamData = snap.val();
-
-        if (!streamData) {
-          // No stream active
-          resetToDashboard();
-          return;
-        }
-
-        if (streamData.live) {
-          // Stream is live
-          streamEnded = false;
-          smallLivePreview.style.display = 'none';
-
-          livePreviewUser.style.display = 'flex';
-          inputArea.style.display = 'flex';
-          messagesDiv.innerHTML = '';
-
-          // Simulate video stream with placeholder or blank
-          // (Real streaming requires more infra - this is demo only)
-          userStreamVideo.srcObject = null;
-          userStreamVideo.poster = "https://via.placeholder.com/600x340?text=Live+Stream";
-          userStreamVideo.controls = true;
-
-          listenForMessages();
-
-        } else {
-          // Stream ended - show replay preview card & chat replay
-          livePreviewUser.style.display = 'none';
-          inputArea.style.display = 'none';
-          messagesDiv.innerHTML = '';
-
-          smallPreviewName.textContent = streamData.name || 'Stream Ended';
-          smallPreviewDesc.textContent = streamData.description || '';
-
-          smallLivePreview.style.display = 'block';
-
-          // Load chat replay
-          listenForMessages();
-
-          streamEnded = true;
-        }
-      });
-
-      // Clicking preview card to watch replay chat only
-      smallLivePreview.onclick = () => {
-        if (streamEnded) {
-          alert('Replay chat is shown below.');
-        }
-      };
-    }
-
-    // Init app
-    if (isOwner) {
-      // Show owner UI
-      createLiveForm.style.display = 'flex';
-      livePreviewOwner.style.display = 'none';
-      livePreviewUser.style.display = 'none';
-      inputArea.style.display = 'none';
-      smallLivePreview.style.display = 'none';
-
-      // Listen if live or ended (for owner page refresh)
-      db.ref('streams/' + streamId).on('value', async (snap) => {
-        const streamData = snap.val();
-        if (!streamData || !streamData.live) {
-          resetToDashboard();
-        }
-      });
+  // Listen auth state
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if(user) {
+      userInfo.textContent = `Signed in as: ${user.displayName}`;
+      signInBtn.style.display = 'none';
+      signOutBtn.style.display = 'block';
+      startStreamBtn.disabled = false;
+      chatInput.disabled = false;
     } else {
-      // Viewer UI
-      setupViewer();
+      userInfo.textContent = 'Not signed in';
+      signInBtn.style.display = 'block';
+      signOutBtn.style.display = 'none';
+      startStreamBtn.disabled = true;
+      stopStreamBtn.disabled = true;
+      chatInput.disabled = true;
+      screenVideo.srcObject = null;
+      screenStream && stopScreenShare();
+      chatDiv.innerHTML = '';
     }
+  });
 
-  </script>
+  // Start screen share
+  startStreamBtn.onclick = async () => {
+    try {
+      screenStream = await navigator.mediaDevices.getDisplayMedia({video:true, audio:false});
+      screenVideo.srcObject = screenStream;
+      startStreamBtn.disabled = true;
+      stopStreamBtn.disabled = false;
+    } catch(err) {
+      alert('Failed to get display media: ' + err.message);
+    }
+  };
+
+  // Stop screen share
+  stopStreamBtn.onclick = () => {
+    stopScreenShare();
+  };
+
+  function stopScreenShare() {
+    if(screenStream) {
+      screenStream.getTracks().forEach(track => track.stop());
+      screenVideo.srcObject = null;
+      screenStream = null;
+      startStreamBtn.disabled = false;
+      stopStreamBtn.disabled = true;
+    }
+  }
+
+  // Chat system logic
+  const chatRef = db.ref('chat/messages');
+
+  // Listen for new chat messages
+  chatRef.limitToLast(100).on('child_added', snapshot => {
+    const msg = snapshot.val();
+    if(!msg) return;
+    appendMessage(msg.name, msg.text);
+  });
+
+  // Append message to chat div
+  function appendMessage(name, text) {
+    const div = document.createElement('div');
+    div.classList.add('chat-message');
+    div.innerHTML = `<strong>${escapeHTML(name)}:</strong> ${escapeHTML(text)}`;
+    chatDiv.appendChild(div);
+    chatDiv.scrollTop = chatDiv.scrollHeight;
+  }
+
+  // Escape HTML to prevent XSS
+  function escapeHTML(str) {
+    return str.replace(/[&<>"']/g, function(m) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+  }
+
+  // Send chat message on Enter key
+  chatInput.addEventListener('keydown', e => {
+    if(e.key === 'Enter' && chatInput.value.trim() && currentUser) {
+      const message = chatInput.value.trim();
+      chatInput.value = '';
+      chatRef.push({
+        name: currentUser.displayName,
+        text: message,
+        timestamp: Date.now()
+      });
+    }
+  });
+
+</script>
+
 </body>
 </html>
