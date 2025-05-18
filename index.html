@@ -2,393 +2,178 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Live Stream Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Screen Share Stream with Chat</title>
 <style>
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: 'Segoe UI', sans-serif; background:#121212; color:#eee; }
-  #login-screen, #dashboard, #stream-view { display:none; height:100vh; padding:20px; }
-  button {
-    background: #3a3a3a; border:none; color:#eee; padding:10px 15px;
-    cursor:pointer; border-radius:4px; font-weight:600; margin:5px 0;
-    transition: background 0.3s ease;
+  body, html {
+    margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif;
   }
-  button:hover { background: #007bff; }
-  #streams-list { display:flex; flex-wrap:wrap; gap:15px; margin-top:10px; }
-  .stream-card {
-    background:#222; padding:10px; width:220px; border-radius:6px;
-    cursor:pointer; box-shadow: 0 0 10px #000;
-    display:flex; flex-direction: column;
+  #streamView {
+    display: flex; height: 100vh;
   }
-  .stream-card img {
-    width: 100%; height: 120px; object-fit: cover; border-radius: 4px;
+  #videoContainer {
+    flex: 2;
+    background: #222;
+    display: flex; justify-content: center; align-items: center;
+    position: relative;
   }
-  .stream-card h3 {
-    margin:8px 0 4px 0; font-size: 1.1rem; color:#00ff99;
+  video {
+    max-width: 100%; max-height: 100%;
+    background: black;
   }
-  .stream-card p {
-    margin:0; font-size: 0.9rem; color:#ccc; flex-grow:1;
-  }
-  #create-stream-form {
-    background:#222; padding:15px; border-radius:6px; margin-top:15px;
-    max-width: 400px;
-  }
-  #create-stream-form input, #create-stream-form textarea {
-    width:100%; padding:8px; margin-bottom:10px; border:none; border-radius:4px;
-    background:#333; color:#eee; font-size: 1rem;
-  }
-  #create-stream-form label { font-weight: 600; margin-bottom: 5px; display: block; }
-  #chat {
-    margin-top: 15px; background:#1e1e1e; border-radius:6px; padding: 10px;
-    max-width: 600px;
-    display: flex; flex-direction: column; height: 60vh;
+  #chatContainer {
+    flex: 1;
+    display: flex; flex-direction: column;
+    border-left: 1px solid #444;
+    background: #111;
+    color: white;
   }
   #messages {
-    flex: 1; overflow-y: auto; background: #121212; border-radius: 6px; padding: 12px;
-    font-size: 14px; line-height: 1.4; box-shadow: inset 0 0 10px #000; margin-bottom: 10px;
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
   }
   .chat-message {
     margin-bottom: 8px;
   }
-  .chat-message strong {
-    color: #00ff99;
-  }
-  #input-area {
-    display: flex; gap: 8px;
+  #inputArea {
+    display: flex;
+    border-top: 1px solid #444;
   }
   #msgInput {
-    flex: 1; padding: 8px 12px; border-radius: 6px; border: none; background: #222; color: #eee;
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: #222;
+    color: white;
+    font-size: 16px;
   }
-  #msgInput:focus { outline:none; background:#333; }
   #sendBtn {
-    padding: 8px 20px; border-radius: 6px; background: #007bff; font-weight: 600; border:none;
+    background: #4CAF50;
+    border: none;
+    padding: 10px 15px;
+    color: white;
     cursor: pointer;
   }
-  #sendBtn:hover { background: #0056b3; }
-  #streamVideo {
-    width: 100%; max-height: 320px; background: #000; margin-bottom: 10px;
+  #micControls {
+    position: absolute;
+    top: 10px;
+    left: 10px;
   }
-  #logoutBtn {
-    position: fixed; top: 10px; right: 10px; background:#d33; border:none; border-radius:4px;
-    padding: 8px 12px; font-weight: 600; cursor:pointer;
-  }
-  #cameraMicControls {
-    margin-bottom: 10px;
-  }
-  #cameraMicControls button {
-    margin-right: 10px;
+  #toggleMicBtn {
+    background: #e74c3c;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
   }
 </style>
 </head>
 <body>
 
-<!-- LOGIN SCREEN -->
-<div id="login-screen" style="display:flex; justify-content:center; align-items:center;">
-  <button id="loginBtn">Sign in with Google</button>
-</div>
-
-<!-- DASHBOARD -->
-<div id="dashboard">
-  <h1>Live Streams</h1>
-  <div id="streams-list"></div>
-
-  <!-- Only show this to owner -->
-  <div id="create-stream-form" style="display:none;">
-    <h2>Create New Stream</h2>
-    <label for="streamName">Stream Name</label>
-    <input id="streamName" type="text" placeholder="Enter stream name" />
-    <label for="streamDesc">Description</label>
-    <textarea id="streamDesc" rows="3" placeholder="Stream description"></textarea>
-
-    <!-- Changed from URL input to file picker -->
-    <label for="streamThumbFile">Select Thumbnail Image</label>
-    <input id="streamThumbFile" type="file" accept="image/*" />
-
-    <button id="createStreamBtn">Create Stream</button>
+<div id="streamView" style="display:none;">
+  <div id="videoContainer">
+    <video id="streamVideo" autoplay muted playsinline></video>
+    <div id="micControls" style="display:none;">
+      <button id="toggleMicBtn">Mute Mic</button>
+    </div>
   </div>
-
-  <button id="logoutBtn">Logout</button>
-</div>
-
-<!-- STREAM VIEW -->
-<div id="stream-view">
-  <button id="backBtn">← Back to Dashboard</button>
-  <h2 id="streamTitle"></h2>
-
-  <!-- Camera and Mic toggle buttons -->
-  <div id="cameraMicControls" style="display:none;">
-    <button id="toggleCameraBtn">Turn Camera Off</button>
-    <button id="toggleMicBtn">Turn Mic Off</button>
-  </div>
-
-  <video id="streamVideo" autoplay muted playsinline></video>
-  <p id="streamDescText"></p>
-
-  <div id="chat">
+  <div id="chatContainer">
     <div id="messages"><em>Loading chat...</em></div>
-    <div id="input-area" style="display:none;">
-      <input id="msgInput" type="text" placeholder="Type your message..." autocomplete="off" />
+    <div id="inputArea" style="display:none;">
+      <input type="text" id="msgInput" placeholder="Type your message" />
       <button id="sendBtn">Send</button>
     </div>
   </div>
 </div>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-
 <script>
-  // Config - replace with your Firebase project config
-  const firebaseConfig = {
-    apiKey: "AIzaSyCq74S-8b4maDXEKkDXwoaz28Y_Qf0N_34",
-    authDomain: "livestreamchat-268a9.firebaseapp.com",
-    databaseURL: "https://livestreamchat-268a9-default-rtdb.firebaseio.com",
-    projectId: "livestreamchat-268a9",
-    storageBucket: "livestreamchat-268a9.appspot.com",
-    messagingSenderId: "761482927725",
-    appId: "1:761482927725:web:7d525941da69c424bb6964"
-  };
+  // Simulated owner check (replace with your auth check)
+  const isOwner = true; // Change to false to test viewer mode
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-  const storage = firebase.storage();
-
-  const OWNER_EMAIL = "realgyjs@gmail.com";
-
-  // UI Elements
-  const loginScreen = document.getElementById('login-screen');
-  const loginBtn = document.getElementById('loginBtn');
-
-  const dashboard = document.getElementById('dashboard');
-  const streamsList = document.getElementById('streams-list');
-  const createForm = document.getElementById('create-stream-form');
-  const streamNameInput = document.getElementById('streamName');
-  const streamDescInput = document.getElementById('streamDesc');
-  const streamThumbFileInput = document.getElementById('streamThumbFile');
-  const createStreamBtn = document.getElementById('createStreamBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-
-  const streamView = document.getElementById('stream-view');
-  const backBtn = document.getElementById('backBtn');
-  const streamTitle = document.getElementById('streamTitle');
-  const streamDescText = document.getElementById('streamDescText');
+  const streamView = document.getElementById('streamView');
   const streamVideo = document.getElementById('streamVideo');
-
-  const cameraMicControls = document.getElementById('cameraMicControls');
-  const toggleCameraBtn = document.getElementById('toggleCameraBtn');
+  const micControls = document.getElementById('micControls');
   const toggleMicBtn = document.getElementById('toggleMicBtn');
-
-  // Chat UI
   const messagesDiv = document.getElementById('messages');
-  const inputArea = document.getElementById('input-area');
+  const inputArea = document.getElementById('inputArea');
   const msgInput = document.getElementById('msgInput');
   const sendBtn = document.getElementById('sendBtn');
 
-  let currentUser = null;
-  let currentStreamId = null;
-  let messagesRef = null;
   let mediaStream = null;
-  let cameraOn = true;
   let micOn = true;
 
-  // --- AUTH ---
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(console.error);
-  };
+  async function startOwnerStream() {
+    try {
+      // Ask for screen share first
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      // Ask for mic audio
+      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
 
-  logoutBtn.onclick = () => auth.signOut();
+      // Combine audio and screen video tracks
+      const combinedStream = new MediaStream([...screenStream.getVideoTracks(), ...audioStream.getAudioTracks()]);
 
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if (user) {
-      loginScreen.style.display = 'none';
-      dashboard.style.display = 'block';
-      streamView.style.display = 'none';
-      loadStreams();
-      if(user.email === OWNER_EMAIL) {
-        createForm.style.display = 'block';
-      } else {
-        createForm.style.display = 'none';
-      }
-    } else {
-      loginScreen.style.display = 'flex';
-      dashboard.style.display = 'none';
-      streamView.style.display = 'none';
-    }
-  });
+      mediaStream = combinedStream;
+      streamVideo.srcObject = mediaStream;
 
-  // --- LOAD STREAMS ---
-  function loadStreams() {
-    streamsList.innerHTML = '<em>Loading streams...</em>';
-    db.ref('streams').on('value', snapshot => {
-      const streams = snapshot.val() || {};
-      streamsList.innerHTML = '';
-      if(Object.keys(streams).length === 0){
-        streamsList.innerHTML = '<p>No streams available.</p>';
-        return;
-      }
-      for (const id in streams) {
-        const s = streams[id];
-        const card = document.createElement('div');
-        card.className = 'stream-card';
-        card.innerHTML = `
-          <img src="${s.thumbnail || 'https://via.placeholder.com/220x120?text=No+Image'}" alt="Thumbnail" />
-          <h3>${s.name}</h3>
-          <p>${s.description}</p>
-        `;
-        card.onclick = () => openStream(id, s);
-        streamsList.appendChild(card);
-      }
-    });
-  }
-
-  // --- CREATE STREAM ---
-  createStreamBtn.onclick = async () => {
-    const name = streamNameInput.value.trim();
-    const description = streamDescInput.value.trim();
-    const file = streamThumbFileInput.files[0];
-
-    if(!name) return alert("Please enter a stream name.");
-
-    let thumbnailURL = '';
-    if(file){
-      const storageRef = storage.ref();
-      const thumbRef = storageRef.child('thumbnails/' + Date.now() + '_' + file.name);
-      try {
-        await thumbRef.put(file);
-        thumbnailURL = await thumbRef.getDownloadURL();
-      } catch(e) {
-        alert("Failed to upload thumbnail: " + e.message);
-        return;
-      }
-    }
-
-    const newStreamRef = db.ref('streams').push();
-    newStreamRef.set({
-      name,
-      description,
-      thumbnail: thumbnailURL,
-      ownerEmail: currentUser.email
-    });
-    streamNameInput.value = '';
-    streamDescInput.value = '';
-    streamThumbFileInput.value = '';
-    alert("Stream created!");
-  };
-
-  // --- OPEN STREAM ---
-  async function openStream(id, streamData) {
-    currentStreamId = id;
-    streamTitle.textContent = streamData.name;
-    streamDescText.textContent = streamData.description;
-    dashboard.style.display = 'none';
-    streamView.style.display = 'block';
-
-    // Reset chat
-    messagesDiv.innerHTML = '<em>Loading chat...</em>';
-    inputArea.style.display = 'none';
-
-    // Show camera/mic toggles only if owner
-    if(currentUser.email === streamData.ownerEmail){
-      cameraMicControls.style.display = 'block';
-      // Start media stream for owner
-      try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
-        streamVideo.srcObject = mediaStream;
-        cameraOn = true;
-        micOn = true;
-        updateToggleButtons();
-      } catch (e) {
-        alert("Failed to access camera/microphone: " + e.message);
-        streamVideo.srcObject = null;
-      }
-    } else {
-      cameraMicControls.style.display = 'none';
-      streamVideo.srcObject = null;
-    }
-
-    // Chat setup
-    messagesRef = db.ref('messages/' + id);
-    messagesRef.off();
-    messagesRef.on('child_added', snap => {
-      const data = snap.val();
-      addChatMessage(data.userName, data.message);
-    });
-    if(currentUser){
+      micControls.style.display = 'block';
       inputArea.style.display = 'flex';
+
+      updateMicButton();
+
+    } catch (err) {
+      alert('Failed to get screen and mic permissions: ' + err.message);
     }
   }
 
-  backBtn.onclick = () => {
-    if(mediaStream){
-      mediaStream.getTracks().forEach(t => t.stop());
-      mediaStream = null;
-    }
-    currentStreamId = null;
-    streamView.style.display = 'none';
-    dashboard.style.display = 'block';
+  function startViewerStream() {
+    // For demo, no real stream — just black screen placeholder
+    // In real app, you'd pull stream from server or WebRTC
+    streamVideo.style.background = 'black';
+    inputArea.style.display = 'flex';
+    micControls.style.display = 'none';
+  }
+
+  toggleMicBtn.onclick = () => {
+    if (!mediaStream) return;
+    micOn = !micOn;
+    mediaStream.getAudioTracks().forEach(track => track.enabled = micOn);
+    updateMicButton();
   };
 
-  // --- CHAT FUNCTIONS ---
-  function addChatMessage(userName, message) {
-    const div = document.createElement('div');
-    div.className = 'chat-message';
-    div.innerHTML = `<strong>${userName}:</strong> ${escapeHtml(message)}`;
-    messagesDiv.appendChild(div);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  function updateMicButton() {
+    toggleMicBtn.textContent = micOn ? 'Mute Mic' : 'Unmute Mic';
+    toggleMicBtn.style.background = micOn ? '#e74c3c' : '#27ae60';
   }
 
   sendBtn.onclick = () => {
     const msg = msgInput.value.trim();
-    if(!msg) return;
-    if(!currentStreamId) return;
-
-    messagesRef.push({
-      userName: currentUser.displayName || 'Anon',
-      message: msg,
-      timestamp: Date.now()
-    });
+    if (!msg) return;
+    addChatMessage(isOwner ? 'Owner' : 'Viewer', msg);
     msgInput.value = '';
+    // Here you'd send msg to your backend/chat system
   };
 
-  msgInput.addEventListener('keypress', e => {
-    if(e.key === 'Enter'){
-      sendBtn.click();
-    }
-  });
-
-  // --- CAMERA/MIC TOGGLE ---
-  toggleCameraBtn.onclick = () => {
-    if(!mediaStream) return;
-    cameraOn = !cameraOn;
-    mediaStream.getVideoTracks().forEach(track => {
-      track.enabled = cameraOn;
-    });
-    updateToggleButtons();
-  };
-
-  toggleMicBtn.onclick = () => {
-    if(!mediaStream) return;
-    micOn = !micOn;
-    mediaStream.getAudioTracks().forEach(track => {
-      track.enabled = micOn;
-    });
-    updateToggleButtons();
-  };
-
-  function updateToggleButtons() {
-    toggleCameraBtn.textContent = cameraOn ? 'Turn Camera Off' : 'Turn Camera On';
-    toggleMicBtn.textContent = micOn ? 'Turn Mic Off' : 'Turn Mic On';
+  function addChatMessage(user, message) {
+    const div = document.createElement('div');
+    div.className = 'chat-message';
+    div.textContent = `${user}: ${message}`;
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
 
-  // --- UTIL ---
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+  msgInput.addEventListener('keypress', e => {
+    if (e.key === 'Enter') sendBtn.click();
+  });
+
+  // Init
+  streamView.style.display = 'flex';
+
+  if (isOwner) {
+    startOwnerStream();
+  } else {
+    startViewerStream();
   }
 </script>
 </body>
