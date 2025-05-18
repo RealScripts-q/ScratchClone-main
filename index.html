@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Live Stream + Chat</title>
+  <title>Live Stream + Authenticated Chat</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; }
     #stream { flex: 2; background: black; }
@@ -14,6 +14,7 @@
     #input-area button { padding: 8px 12px; font-size: 1rem; }
     .message { margin-bottom: 10px; }
     .message strong { color: #007bff; }
+    #loginBtn, #logoutBtn { margin: 10px; padding: 10px 15px; font-size: 1rem; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -24,8 +25,12 @@
   </div>
 
   <div id="chat">
+    <div id="auth-area">
+      <button id="loginBtn">Sign in with Google</button>
+      <button id="logoutBtn" style="display:none;">Logout</button>
+    </div>
     <div id="messages"></div>
-    <div id="input-area">
+    <div id="input-area" style="display:none;">
       <input id="msgInput" type="text" placeholder="Type your message..." />
       <button id="sendBtn">Send</button>
     </div>
@@ -33,10 +38,10 @@
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
   <script>
-    // Your Firebase config:
     const firebaseConfig = {
       apiKey: "AIzaSyCq74S-8b4maDXEKkDXwoaz28Y_Qf0N_34",
       authDomain: "livestreamchat-268a9.firebaseapp.com",
@@ -47,46 +52,99 @@
       appId: "1:761482927725:web:7d525941da69c424bb6964"
     };
 
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
     const db = firebase.database();
 
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
     const messagesDiv = document.getElementById('messages');
     const msgInput = document.getElementById('msgInput');
     const sendBtn = document.getElementById('sendBtn');
+    const inputArea = document.getElementById('input-area');
 
-    // Random username for demo
-    const username = 'User' + Math.floor(Math.random() * 1000);
+    let currentUser = null;
 
-    // Listen for new chat messages
-    const messagesRef = db.ref('messages');
-    messagesRef.on('child_added', snapshot => {
-      const msg = snapshot.val();
-      const msgElem = document.createElement('div');
-      msgElem.classList.add('message');
-      msgElem.innerHTML = `<strong>${msg.user}:</strong> ${msg.text}`;
-      messagesDiv.appendChild(msgElem);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    // Listen for auth state changes
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'inline-block';
+        inputArea.style.display = 'flex';
+        messagesDiv.innerHTML = ''; // clear chat on login
+        startListeningMessages();
+      } else {
+        currentUser = null;
+        loginBtn.style.display = 'inline-block';
+        logoutBtn.style.display = 'none';
+        inputArea.style.display = 'none';
+        messagesDiv.innerHTML = '<em>Please sign in to chat</em>';
+        stopListeningMessages();
+      }
     });
 
-    // Send message
-    sendBtn.onclick = () => {
-      const text = msgInput.value.trim();
-      if(text) {
-        messagesRef.push({
-          user: username,
-          text: text,
-          timestamp: Date.now()
-        });
-        msgInput.value = '';
-      }
+    // Google sign-in
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(console.error);
     };
 
-    // Send message on Enter key press
-    msgInput.addEventListener('keydown', e => {
-      if(e.key === 'Enter') sendBtn.click();
-    });
-  </script>
+    // Logout
+    logoutBtn.onclick = () => auth.signOut();
 
+    // Chat message sending
+    sendBtn.onclick = () => {
+      const text = msgInput.value.trim();
+      if (!text || !currentUser) return;
+
+      db.ref('messages').push({
+        user: currentUser.displayName,
+        userId: currentUser.uid,
+        text: text,
+        timestamp: Date.now()
+      });
+
+      msgInput.value = '';
+    };
+
+    msgInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendBtn.click();
+    });
+
+    let messagesRef = null;
+
+    // Listen for new messages
+    function startListeningMessages() {
+      messagesRef = db.ref('messages').limitToLast(50);
+      messagesRef.on('child_added', snapshot => {
+        const msg = snapshot.val();
+        const msgElem = document.createElement('div');
+        msgElem.classList.add('message');
+
+        // Highlight own messages
+        if (msg.userId === currentUser.uid) {
+          msgElem.style.fontWeight = 'bold';
+          msgElem.style.color = '#008800';
+        }
+
+        msgElem.innerHTML = `<strong>${msg.user}:</strong> ${escapeHtml(msg.text)}`;
+        messagesDiv.appendChild(msgElem);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+    }
+
+    function stopListeningMessages() {
+      if (messagesRef) messagesRef.off();
+    }
+
+    // Simple HTML escaping to avoid injection
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
 </body>
 </html>
