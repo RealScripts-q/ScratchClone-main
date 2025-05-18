@@ -2,34 +2,28 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Live Stream + Authenticated Chat</title>
+  <title>Firebase Google Auth Chat</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; }
+    body { font-family: Arial; margin: 0; padding: 0; display: flex; height: 100vh; }
     #stream { flex: 2; background: black; }
     #chat { flex: 1; display: flex; flex-direction: column; border-left: 2px solid #ccc; }
-    #messages { flex: 1; padding: 10px; overflow-y: auto; border-bottom: 1px solid #ccc; }
+    #messages { flex: 1; overflow-y: auto; padding: 10px; border-bottom: 1px solid #ccc; }
     #input-area { display: flex; padding: 10px; }
-    #input-area input { flex: 1; padding: 8px; font-size: 1rem; }
-    #input-area button { padding: 8px 12px; font-size: 1rem; }
-    .message { margin-bottom: 10px; }
-    .message strong { color: #007bff; }
-    #loginBtn, #logoutBtn { margin: 10px; padding: 10px 15px; font-size: 1rem; cursor: pointer; }
+    #input-area input { flex: 1; padding: 8px; }
+    #input-area button { padding: 8px; }
+    #loginBtn, #logoutBtn { margin: 10px; }
   </style>
 </head>
 <body>
-
   <div id="stream">
-    <!-- Replace YOUR_YOUTUBE_VIDEO_ID below with your live stream's video ID -->
     <iframe width="100%" height="100%" src="https://www.youtube.com/embed/YOUR_YOUTUBE_VIDEO_ID?autoplay=1" frameborder="0" allowfullscreen></iframe>
   </div>
-
   <div id="chat">
     <div id="auth-area">
       <button id="loginBtn">Sign in with Google</button>
       <button id="logoutBtn" style="display:none;">Logout</button>
     </div>
-    <div id="messages"></div>
+    <div id="messages"><em>Please sign in to chat</em></div>
     <div id="input-area" style="display:none;">
       <input id="msgInput" type="text" placeholder="Type your message..." />
       <button id="sendBtn">Send</button>
@@ -53,7 +47,6 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-
     const auth = firebase.auth();
     const db = firebase.database();
 
@@ -65,15 +58,16 @@
     const inputArea = document.getElementById('input-area');
 
     let currentUser = null;
+    let messagesRef = null;
 
-    // Listen for auth state changes
+    // Auth state listener
     auth.onAuthStateChanged(user => {
-      if (user) {
+      if(user) {
         currentUser = user;
         loginBtn.style.display = 'none';
         logoutBtn.style.display = 'inline-block';
         inputArea.style.display = 'flex';
-        messagesDiv.innerHTML = ''; // clear chat on login
+        messagesDiv.innerHTML = '';
         startListeningMessages();
       } else {
         currentUser = null;
@@ -85,19 +79,17 @@
       }
     });
 
-    // Google sign-in
     loginBtn.onclick = () => {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).catch(console.error);
+      auth.signInWithPopup(provider).catch(e => alert('Sign-in error: '+e.message));
     };
 
-    // Logout
     logoutBtn.onclick = () => auth.signOut();
 
-    // Chat message sending
     sendBtn.onclick = () => {
+      if (!currentUser) return;
       const text = msgInput.value.trim();
-      if (!text || !currentUser) return;
+      if(!text) return;
 
       db.ref('messages').push({
         user: currentUser.displayName,
@@ -110,40 +102,26 @@
     };
 
     msgInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') sendBtn.click();
+      if(e.key === 'Enter') sendBtn.click();
     });
 
-    let messagesRef = null;
-
-    // Listen for new messages
     function startListeningMessages() {
       messagesRef = db.ref('messages').limitToLast(50);
       messagesRef.on('child_added', snapshot => {
         const msg = snapshot.val();
         const msgElem = document.createElement('div');
-        msgElem.classList.add('message');
-
-        // Highlight own messages
+        msgElem.textContent = `${msg.user}: ${msg.text}`;
         if (msg.userId === currentUser.uid) {
           msgElem.style.fontWeight = 'bold';
-          msgElem.style.color = '#008800';
+          msgElem.style.color = '#007700';
         }
-
-        msgElem.innerHTML = `<strong>${msg.user}:</strong> ${escapeHtml(msg.text)}`;
         messagesDiv.appendChild(msgElem);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
       });
     }
 
     function stopListeningMessages() {
-      if (messagesRef) messagesRef.off();
-    }
-
-    // Simple HTML escaping to avoid injection
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+      if(messagesRef) messagesRef.off();
     }
   </script>
 </body>
