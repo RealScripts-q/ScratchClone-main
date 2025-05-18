@@ -1,92 +1,128 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>YouTube Chat Login</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <meta charset="UTF-8" />
+  <title>Firebase Google Auth Chat</title>
   <style>
-    body { font-family: Arial; margin: 20px; }
-    #chatBox { border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; margin-bottom: 10px; }
-    .msg { margin: 5px 0; }
-    .username { font-weight: bold; }
+    body { font-family: Arial; margin: 0; padding: 0; display: flex; height: 100vh; }
+    #stream { flex: 2; background: black; }
+    #chat { flex: 1; display: flex; flex-direction: column; border-left: 2px solid #ccc; }
+    #messages { flex: 1; overflow-y: auto; padding: 10px; border-bottom: 1px solid #ccc; }
+    #input-area { display: flex; padding: 10px; }
+    #input-area input { flex: 1; padding: 8px; }
+    #input-area button { padding: 8px; }
+    #loginBtn, #logoutBtn { margin: 10px; }
   </style>
 </head>
 <body>
-  <h2>Live Chat (YouTube Login)</h2>
-  <button onclick="signInWithYouTube()">Sign in with YouTube</button>
-  <p id="status">Not signed in</p>
+  <div id="stream">
+    <iframe width="100%" height="100%" src="https://www.youtube.com/embed/YOUR_YOUTUBE_VIDEO_ID?autoplay=1" frameborder="0" allowfullscreen></iframe>
+  </div>
+  <div id="chat">
+    <div id="auth-area">
+      <button id="loginBtn">Sign in with Google</button>
+      <button id="logoutBtn" style="display:none;">Logout</button>
+    </div>
+    <div id="messages"><em>Please sign in to chat</em></div>
+    <div id="input-area" style="display:none;">
+      <input id="msgInput" type="text" placeholder="Type your message..." />
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
 
-  <div id="chatBox"></div>
-
-  <input id="messageInput" placeholder="Type a message..." />
-  <button onclick="sendMessage()">Send</button>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
   <script>
-    // Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCq74S-8b4maDXEKkDXwoaz28Y_Qf0N_34",
       authDomain: "livestreamchat-268a9.firebaseapp.com",
       databaseURL: "https://livestreamchat-268a9-default-rtdb.firebaseio.com",
       projectId: "livestreamchat-268a9",
-      storageBucket: "livestreamchat-268a9.appspot.com",
+      storageBucket: "livestreamchat-268a9.firebasestorage.app",
       messagingSenderId: "761482927725",
       appId: "1:761482927725:web:7d525941da69c424bb6964"
     };
 
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.database();
 
-    let currentUserName = null;
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const messagesDiv = document.getElementById('messages');
+    const msgInput = document.getElementById('msgInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const inputArea = document.getElementById('input-area');
 
-    async function signInWithYouTube() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      provider.addScope('https://www.googleapis.com/auth/youtube.readonly');
+    let currentUser = null;
+    let messagesRef = null;
 
-      try {
-        const result = await firebase.auth().signInWithPopup(provider);
-        const token = result.credential.accessToken;
-
-        const res = await fetch("https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        const data = await res.json();
-        if (data.items && data.items.length > 0) {
-          currentUserName = data.items[0].snippet.title;
-          document.getElementById("status").textContent = "Signed in as: " + currentUserName;
-        } else {
-          document.getElementById("status").textContent = "YouTube channel not found.";
-        }
-      } catch (error) {
-        console.error("Sign-in failed:", error);
-        document.getElementById("status").textContent = "Sign-in failed: " + error.message;
+    // Auth state listener
+    auth.onAuthStateChanged(user => {
+      if(user) {
+        currentUser = user;
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'inline-block';
+        inputArea.style.display = 'flex';
+        messagesDiv.innerHTML = '';
+        startListeningMessages();
+      } else {
+        currentUser = null;
+        loginBtn.style.display = 'inline-block';
+        logoutBtn.style.display = 'none';
+        inputArea.style.display = 'none';
+        messagesDiv.innerHTML = '<em>Please sign in to chat</em>';
+        stopListeningMessages();
       }
-    }
+    });
 
-    function sendMessage() {
-      const message = document.getElementById("messageInput").value;
-      if (!currentUserName || !message) return;
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(e => alert('Sign-in error: '+e.message));
+    };
 
-      db.ref("chat").push({
-        name: currentUserName,
-        text: message,
+    logoutBtn.onclick = () => auth.signOut();
+
+    sendBtn.onclick = () => {
+      if (!currentUser) return;
+      const text = msgInput.value.trim();
+      if(!text) return;
+
+      db.ref('messages').push({
+        user: currentUser.displayName,
+        userId: currentUser.uid,
+        text: text,
         timestamp: Date.now()
       });
 
-      document.getElementById("messageInput").value = "";
+      msgInput.value = '';
+    };
+
+    msgInput.addEventListener('keydown', e => {
+      if(e.key === 'Enter') sendBtn.click();
+    });
+
+    function startListeningMessages() {
+      messagesRef = db.ref('messages').limitToLast(50);
+      messagesRef.on('child_added', snapshot => {
+        const msg = snapshot.val();
+        const msgElem = document.createElement('div');
+        msgElem.textContent = `${msg.user}: ${msg.text}`;
+        if (msg.userId === currentUser.uid) {
+          msgElem.style.fontWeight = 'bold';
+          msgElem.style.color = '#007700';
+        }
+        messagesDiv.appendChild(msgElem);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
     }
 
-    // Live chat listener
-    db.ref("chat").on("child_added", (snap) => {
-      const msg = snap.val();
-      const chatBox = document.getElementById("chatBox");
-      const div = document.createElement("div");
-      div.className = "msg";
-      div.innerHTML = `<span class="username">${msg.name}:</span> ${msg.text}`;
-      chatBox.appendChild(div);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    });
+    function stopListeningMessages() {
+      if(messagesRef) messagesRef.off();
+    }
   </script>
 </body>
 </html>
