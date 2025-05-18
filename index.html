@@ -1,249 +1,318 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Screen Stream + Chat + Dashboard</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    margin: 0; padding: 0;
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
-    background: #121212;
-    color: white;
-  }
-  #chat-container {
-    width: 320px;
-    background: #222;
-    display: flex;
-    flex-direction: column;
-    padding: 10px;
-    box-sizing: border-box;
-  }
-  #chat {
-    flex-grow: 1;
-    overflow-y: auto;
-    background: #111;
-    padding: 10px;
-    border-radius: 6px;
-    margin-bottom: 10px;
-  }
-  .chat-message {
-    margin-bottom: 10px;
-  }
-  .chat-message strong {
-    color: #ffb400;
-  }
-  #chat-input {
-    width: 100%;
-    padding: 10px;
-    font-size: 1rem;
-    border-radius: 4px;
-    border: none;
-    outline: none;
-  }
-  #dashboard {
-    width: 300px;
-    background: #222;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    padding: 10px;
-    box-sizing: border-box;
-  }
-  #dashboard button {
-    margin: 10px 0;
-    padding: 10px;
-    font-size: 1rem;
-    cursor: pointer;
-    border-radius: 4px;
-    border: none;
-    background: #444;
-    color: white;
-    transition: background 0.3s;
-  }
-  #dashboard button:hover:not(:disabled) {
-    background: #ffb400;
-    color: black;
-  }
-  #dashboard button:disabled {
-    background: #666;
-    cursor: not-allowed;
-  }
-  #user-info {
-    margin-bottom: 15px;
-  }
-  #stream-container {
-    flex-grow: 1;
-    background: black;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-  }
-  video#screen-video {
-    max-width: 90vw;
-    max-height: 90vh;
-    border-radius: 8px;
-    background: black;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Screen Share Stream + Chat</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      background: #121212;
+      color: white;
+    }
+
+    #dashboard {
+      width: 300px;
+      background: #222;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      box-sizing: border-box;
+      border-right: 2px solid #333;
+    }
+
+    #dashboard h2 {
+      margin: 0 0 20px;
+      font-weight: 600;
+      color: #ffb400;
+    }
+
+    #signin-btn, #start-stream-btn, #stop-stream-btn {
+      background: #ffb400;
+      border: none;
+      padding: 12px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      border-radius: 8px;
+      font-weight: bold;
+      color: #121212;
+      transition: background 0.3s ease;
+    }
+
+    #signin-btn:hover, #start-stream-btn:hover, #stop-stream-btn:hover {
+      background: #e6a500;
+    }
+
+    #user-info {
+      margin-bottom: 20px;
+      font-size: 1rem;
+      word-break: break-word;
+    }
+
+    #stream-container {
+      flex-grow: 1;
+      background: black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      padding: 15px;
+    }
+
+    video#screen-video {
+      width: 80vw;
+      height: auto;
+      max-height: 90vh;
+      border-radius: 12px;
+      background: black;
+      box-shadow: 0 0 15px #ffb400cc;
+    }
+
+    #chat-container {
+      width: 400px;
+      background: #222;
+      display: flex;
+      flex-direction: column;
+      padding: 15px;
+      box-sizing: border-box;
+      border-left: 2px solid #333;
+    }
+
+    #chat {
+      flex-grow: 1;
+      overflow-y: auto;
+      background: #111;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 1.1rem;
+      line-height: 1.4;
+    }
+
+    .chat-message {
+      margin-bottom: 12px;
+      word-wrap: break-word;
+    }
+
+    .chat-message strong {
+      color: #ffb400;
+    }
+
+    #chat-input {
+      width: 100%;
+      padding: 12px;
+      font-size: 1.1rem;
+      border-radius: 6px;
+      border: none;
+      outline: none;
+      background: #333;
+      color: white;
+    }
+
+    #chat-input:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+  </style>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
+  <div id="dashboard">
+    <h2>Stream Dashboard</h2>
+    <div id="user-info">Not signed in</div>
+    <button id="signin-btn">Sign in with Google</button>
+    <button id="start-stream-btn" disabled>Start Screen Share</button>
+    <button id="stop-stream-btn" disabled>Stop Screen Share</button>
+  </div>
 
-<div id="chat-container">
-  <div id="chat"></div>
-  <input id="chat-input" placeholder="Type a message..." disabled />
-</div>
+  <div id="stream-container">
+    <video id="screen-video" autoplay muted playsinline></video>
+  </div>
 
-<div id="stream-container">
-  <video id="screen-video" autoplay muted></video>
-</div>
+  <div id="chat-container">
+    <div id="chat"></div>
+    <input id="chat-input" placeholder="Type a message..." disabled />
+  </div>
 
-<div id="dashboard">
-  <div id="user-info">Not signed in</div>
-  <button id="sign-in-btn">Sign in with Google</button>
-  <button id="sign-out-btn" style="display:none;">Sign Out</button>
-  <button id="start-stream-btn" disabled title="Only realgyjs@gmail.com can share screen">Start Screen Share</button>
-  <button id="stop-stream-btn" disabled>Stop Screen Share</button>
-</div>
+  <script>
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCq74S-8b4maDXEKkDXwoaz28Y_Qf0N_34",
+      authDomain: "livestreamchat-268a9.firebaseapp.com",
+      databaseURL: "https://livestreamchat-268a9-default-rtdb.firebaseio.com",
+      projectId: "livestreamchat-268a9",
+      storageBucket: "livestreamchat-268a9.firebasestorage.app",
+      messagingSenderId: "761482927725",
+      appId: "1:761482927725:web:7d525941da69c424bb6964"
+    };
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-<script>
-  // Your Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyCq74S-8b4maDXEKkDXwoaz28Y_Qf0N_34",
-    authDomain: "livestreamchat-268a9.firebaseapp.com",
-    databaseURL: "https://livestreamchat-268a9-default-rtdb.firebaseio.com",
-    projectId: "livestreamchat-268a9",
-    storageBucket: "livestreamchat-268a9.firebasestorage.app",
-    messagingSenderId: "761482927725",
-    appId: "1:761482927725:web:7d525941da69c424bb6964"
-  };
+    // Elements
+    const signinBtn = document.getElementById('signin-btn');
+    const startBtn = document.getElementById('start-stream-btn');
+    const stopBtn = document.getElementById('stop-stream-btn');
+    const userInfo = document.getElementById('user-info');
+    const chat = document.getElementById('chat');
+    const chatInput = document.getElementById('chat-input');
+    const screenVideo = document.getElementById('screen-video');
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+    // Allowed streamer email
+    const allowedStreamerEmail = "realgyjs@gmail.com";
 
-  const signInBtn = document.getElementById('sign-in-btn');
-  const signOutBtn = document.getElementById('sign-out-btn');
-  const userInfo = document.getElementById('user-info');
-  const startStreamBtn = document.getElementById('start-stream-btn');
-  const stopStreamBtn = document.getElementById('stop-stream-btn');
-  const chatInput = document.getElementById('chat-input');
-  const chatDiv = document.getElementById('chat');
-  const screenVideo = document.getElementById('screen-video');
+    let currentUser = null;
+    let screenStream = null;
+    let chatMessagesRef = null;
 
-  let currentUser = null;
-  let screenStream = null;
+    // Sign in with Google
+    signinBtn.onclick = async () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      try {
+        const result = await auth.signInWithPopup(provider);
+        currentUser = result.user;
+        userInfo.textContent = `Signed in as: ${currentUser.email}`;
+        signinBtn.style.display = 'none';
 
-  signInBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(console.error);
-  };
+        // Enable start stream button only if user is allowed to stream
+        if (currentUser.email === allowedStreamerEmail) {
+          startBtn.disabled = false;
+          userInfo.textContent += " (You can share screen)";
+        } else {
+          startBtn.disabled = true;
+          userInfo.textContent += " (View only)";
+        }
 
-  signOutBtn.onclick = () => {
-    auth.signOut();
-  };
-
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if(user) {
-      userInfo.textContent = `Signed in as: ${user.displayName} (${user.email})`;
-      signInBtn.style.display = 'none';
-      signOutBtn.style.display = 'block';
-      chatInput.disabled = false;
-
-      // Only enable screen sharing for the allowed email
-      if(user.email === 'realgyjs@gmail.com') {
-        startStreamBtn.disabled = false;
-        startStreamBtn.title = 'Start Screen Share';
-      } else {
-        startStreamBtn.disabled = true;
-        startStreamBtn.title = 'Only realgyjs@gmail.com can share screen';
+        chatInput.disabled = false;
+        setupChat();
+      } catch (error) {
+        alert("Sign-in failed: " + error.message);
       }
-    } else {
-      userInfo.textContent = 'Not signed in';
-      signInBtn.style.display = 'block';
-      signOutBtn.style.display = 'none';
-      startStreamBtn.disabled = true;
-      stopStreamBtn.disabled = true;
-      chatInput.disabled = true;
-      screenVideo.srcObject = null;
-      stopScreenShare();
-      chatDiv.innerHTML = '';
-    }
-  });
+    };
 
-  startStreamBtn.onclick = async () => {
-    if(currentUser?.email !== 'realgyjs@gmail.com') return alert('You do not have permission to share screen');
-    try {
-      screenStream = await navigator.mediaDevices.getDisplayMedia({video:true, audio:false});
-      screenVideo.srcObject = screenStream;
-      startStreamBtn.disabled = true;
-      stopStreamBtn.disabled = false;
-    } catch(err) {
-      alert('Failed to get display media: ' + err.message);
-    }
-  };
+    // Setup chat listeners
+    function setupChat() {
+      chatMessagesRef = db.ref('livestream/messages');
 
-  stopStreamBtn.onclick = () => {
-    stopScreenShare();
-  };
+      chatMessagesRef.off(); // Remove previous listeners to prevent duplication
 
-  function stopScreenShare() {
-    if(screenStream) {
-      screenStream.getTracks().forEach(track => track.stop());
-      screenVideo.srcObject = null;
-      screenStream = null;
-      // Re-enable start only if allowed
-      if(currentUser?.email === 'realgyjs@gmail.com') {
-        startStreamBtn.disabled = false;
-      }
-      stopStreamBtn.disabled = true;
-    }
-  }
-
-  // Chat system logic
-  const chatRef = db.ref('chat/messages');
-
-  chatRef.limitToLast(100).on('child_added', snapshot => {
-    const msg = snapshot.val();
-    if(!msg) return;
-    appendMessage(msg.name, msg.text);
-  });
-
-  function appendMessage(name, text) {
-    const div = document.createElement('div');
-    div.classList.add('chat-message');
-    div.innerHTML = `<strong>${escapeHTML(name)}:</strong> ${escapeHTML(text)}`;
-    chatDiv.appendChild(div);
-    chatDiv.scrollTop = chatDiv.scrollHeight;
-  }
-
-  function escapeHTML(str) {
-    return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  }
-
-  chatInput.addEventListener('keydown', e => {
-    if(e.key === 'Enter' && chatInput.value.trim() && currentUser) {
-      const message = chatInput.value.trim();
-      chatInput.value = '';
-      chatRef.push({
-        name: currentUser.displayName,
-        text: message,
-        timestamp: Date.now()
+      chatMessagesRef.on('child_added', snapshot => {
+        const msg = snapshot.val();
+        addChatMessage(msg.name, msg.text);
       });
     }
-  });
-</script>
 
+    // Add chat message to DOM
+    function addChatMessage(name, text) {
+      const div = document.createElement('div');
+      div.classList.add('chat-message');
+      div.innerHTML = `<strong>${escapeHtml(name)}:</strong> ${escapeHtml(text)}`;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    // Escape HTML to avoid XSS
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Send chat message on enter
+    chatInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && chatInput.value.trim() !== '') {
+        e.preventDefault();
+        if (!currentUser) return;
+
+        const msg = {
+          name: currentUser.displayName || currentUser.email,
+          text: chatInput.value.trim(),
+          timestamp: Date.now()
+        };
+
+        chatMessagesRef.push(msg);
+        chatInput.value = '';
+      }
+    });
+
+    // Start screen share
+    startBtn.onclick = async () => {
+      if (!currentUser || currentUser.email !== allowedStreamerEmail) {
+        alert("You are not authorized to share the screen.");
+        return;
+      }
+
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        screenVideo.srcObject = screenStream;
+
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+
+        // Optionally you can send a "stream started" message to chat or DB
+
+        screenStream.getVideoTracks()[0].addEventListener('ended', () => {
+          stopScreenShare();
+        });
+      } catch (err) {
+        alert('Error starting screen share: ' + err.message);
+      }
+    };
+
+    // Stop screen share
+    stopBtn.onclick = () => {
+      stopScreenShare();
+    };
+
+    function stopScreenShare() {
+      if (screenStream) {
+        let tracks = screenStream.getTracks();
+        tracks.forEach(track => track.stop());
+        screenVideo.srcObject = null;
+        screenStream = null;
+
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      }
+    }
+
+    // On auth state changed (reload persistence)
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        userInfo.textContent = `Signed in as: ${user.email}`;
+        signinBtn.style.display = 'none';
+
+        if (user.email === allowedStreamerEmail) {
+          startBtn.disabled = false;
+          userInfo.textContent += " (You can share screen)";
+        } else {
+          startBtn.disabled = true;
+          userInfo.textContent += " (View only)";
+        }
+        chatInput.disabled = false;
+        setupChat();
+      } else {
+        currentUser = null;
+        userInfo.textContent = "Not signed in";
+        signinBtn.style.display = 'block';
+        startBtn.disabled = true;
+        stopBtn.disabled = true;
+        chatInput.disabled = true;
+        chat.innerHTML = '';
+      }
+    });
+  </script>
 </body>
 </html>
