@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Firebase Google Auth Chat</title>
+  <title>Firebase YouTube Auth Chat</title>
   <style>
     body { font-family: Arial; margin: 0; padding: 0; display: flex; height: 100vh; }
     #stream { flex: 2; background: black; }
@@ -12,6 +12,9 @@
     #input-area input { flex: 1; padding: 8px; }
     #input-area button { padding: 8px; }
     #loginBtn, #logoutBtn { margin: 10px; }
+    .message { display: flex; align-items: center; margin-bottom: 10px; }
+    .pfp { width: 30px; height: 30px; border-radius: 50%; margin-right: 10px; }
+    .msg-text { word-break: break-word; }
   </style>
 </head>
 <body>
@@ -20,7 +23,7 @@
   </div>
   <div id="chat">
     <div id="auth-area">
-      <button id="loginBtn">Sign in with Google</button>
+      <button id="loginBtn">Sign in with Google (YouTube)</button>
       <button id="logoutBtn" style="display:none;">Logout</button>
     </div>
     <div id="messages"><em>Please sign in to chat</em></div>
@@ -41,7 +44,7 @@
       authDomain: "livestreamchat-268a9.firebaseapp.com",
       databaseURL: "https://livestreamchat-268a9-default-rtdb.firebaseio.com",
       projectId: "livestreamchat-268a9",
-      storageBucket: "livestreamchat-268a9.firebasestorage.app",
+      storageBucket: "livestreamchat-268a9.appspot.com",
       messagingSenderId: "761482927725",
       appId: "1:761482927725:web:7d525941da69c424bb6964"
     };
@@ -60,7 +63,6 @@
     let currentUser = null;
     let messagesRef = null;
 
-    // Auth state listener
     auth.onAuthStateChanged(user => {
       if(user) {
         currentUser = user;
@@ -81,6 +83,7 @@
 
     loginBtn.onclick = () => {
       const provider = new firebase.auth.GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/youtube.readonly');
       auth.signInWithPopup(provider).catch(e => alert('Sign-in error: '+e.message));
     };
 
@@ -94,6 +97,7 @@
       db.ref('messages').push({
         user: currentUser.displayName,
         userId: currentUser.uid,
+        photoURL: currentUser.photoURL,
         text: text,
         timestamp: Date.now()
       });
@@ -110,11 +114,23 @@
       messagesRef.on('child_added', snapshot => {
         const msg = snapshot.val();
         const msgElem = document.createElement('div');
-        msgElem.textContent = `${msg.user}: ${msg.text}`;
+        msgElem.className = 'message';
+
+        const avatar = document.createElement('img');
+        avatar.className = 'pfp';
+        avatar.src = msg.photoURL || 'https://via.placeholder.com/30';
+
+        const textElem = document.createElement('div');
+        textElem.className = 'msg-text';
+        textElem.textContent = `${msg.user}: ${msg.text}`;
+
         if (msg.userId === currentUser.uid) {
-          msgElem.style.fontWeight = 'bold';
-          msgElem.style.color = '#007700';
+          textElem.style.fontWeight = 'bold';
+          textElem.style.color = '#007700';
         }
+
+        msgElem.appendChild(avatar);
+        msgElem.appendChild(textElem);
         messagesDiv.appendChild(msgElem);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
       });
