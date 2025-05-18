@@ -1,356 +1,369 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Live Stream Dashboard</title>
-<style>
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: 'Segoe UI', sans-serif; background:#121212; color:#eee; }
-  #login-screen, #dashboard, #stream-view { display:none; height:100vh; padding:20px; }
-  button {
-    background: #3a3a3a; border:none; color:#eee; padding:10px 15px;
-    cursor:pointer; border-radius:4px; font-weight:600; margin:5px 0;
-    transition: background 0.3s ease;
-  }
-  button:hover { background: #007bff; }
-  #streams-list { display:flex; flex-wrap:wrap; gap:15px; margin-top:10px; }
-  .stream-card {
-    background:#222; padding:10px; width:220px; border-radius:6px;
-    cursor:pointer; box-shadow: 0 0 10px #000;
-    display:flex; flex-direction: column;
-  }
-  .stream-card img {
-    width: 100%; height: 120px; object-fit: cover; border-radius: 4px;
-  }
-  .stream-card h3 {
-    margin:8px 0 4px 0; font-size: 1.1rem; color:#00ff99;
-  }
-  .stream-card p {
-    margin:0; font-size: 0.9rem; color:#ccc; flex-grow:1;
-  }
-  #create-stream-form {
-    background:#222; padding:15px; border-radius:6px; margin-top:15px;
-    max-width: 400px;
-  }
-  #create-stream-form input, #create-stream-form textarea {
-    width:100%; padding:8px; margin-bottom:10px; border:none; border-radius:4px;
-    background:#333; color:#eee; font-size: 1rem;
-  }
-  #create-stream-form label { font-weight: 600; margin-bottom: 5px; display: block; }
-  #chat {
-    margin-top: 15px; background:#1e1e1e; border-radius:6px; padding: 10px;
-    max-width: 600px;
-    display: flex; flex-direction: column; height: 60vh;
-  }
-  #messages {
-    flex: 1; overflow-y: auto; background: #121212; border-radius: 6px; padding: 12px;
-    font-size: 14px; line-height: 1.4; box-shadow: inset 0 0 10px #000; margin-bottom: 10px;
-  }
-  .chat-message {
-    margin-bottom: 8px;
-  }
-  .chat-message strong {
-    color: #00ff99;
-  }
-  #input-area {
-    display: flex; gap: 8px;
-  }
-  #msgInput {
-    flex: 1; padding: 8px 12px; border-radius: 6px; border: none; background: #222; color: #eee;
-  }
-  #msgInput:focus { outline:none; background:#333; }
-  #sendBtn {
-    padding: 8px 20px; border-radius: 6px; background: #007bff; font-weight: 600; border:none;
-    cursor: pointer;
-  }
-  #sendBtn:hover { background: #0056b3; }
-  #streamVideo {
-    width: 100%; max-height: 320px; background: #000; margin-bottom: 10px;
-  }
-  #logoutBtn {
-    position: fixed; top: 10px; right: 10px; background:#d33; border:none; border-radius:4px;
-    padding: 8px 12px; font-weight: 600; cursor:pointer;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>Live Stream with Thumbnail Upload and Camera/Mic Toggle</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f0f0f0; }
+    #container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+    #videoContainer { position: relative; width: 640px; height: 360px; background: black; margin-bottom: 10px; }
+    video { width: 100%; height: 100%; border-radius: 8px; background: black; }
+    #thumbnailPreview { width: 150px; height: 84px; object-fit: cover; border-radius: 6px; margin-top: 10px; }
+    #chat { max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #fafafa; border-radius: 6px; margin-top: 10px; }
+    #chat p { margin: 5px 0; }
+    button { margin-right: 10px; padding: 8px 12px; border: none; border-radius: 6px; background-color: #007bff; color: white; cursor: pointer; }
+    button:disabled { background-color: #aaa; cursor: not-allowed; }
+    #ownerControls { margin-bottom: 20px; }
+    input[type="file"] { margin-top: 10px; }
+  </style>
 </head>
 <body>
+  <div id="container">
+    <h2>Live Stream with Thumbnail Upload & Camera/Mic Toggle</h2>
 
-<!-- LOGIN SCREEN -->
-<div id="login-screen">
-  <button id="loginBtn">Sign in with Google</button>
-</div>
-
-<!-- DASHBOARD -->
-<div id="dashboard">
-  <h1>Live Streams</h1>
-  <div id="streams-list"></div>
-
-  <!-- Only show this to owner -->
-  <div id="create-stream-form" style="display:none;">
-    <h2>Create New Stream</h2>
-    <label for="streamName">Stream Name</label>
-    <input id="streamName" type="text" placeholder="Enter stream name" />
-    <label for="streamDesc">Description</label>
-    <textarea id="streamDesc" rows="3" placeholder="Stream description"></textarea>
-    <label for="streamThumb">Thumbnail URL</label>
-    <input id="streamThumb" type="url" placeholder="Paste image URL here" />
-    <button id="createStreamBtn">Create Stream</button>
-  </div>
-
-  <button id="logoutBtn">Logout</button>
-</div>
-
-<!-- STREAM VIEW -->
-<div id="stream-view">
-  <button id="backBtn">← Back to Dashboard</button>
-  <h2 id="streamTitle"></h2>
-  <video id="streamVideo" controls autoplay muted></video>
-  <p id="streamDescText"></p>
-
-  <div id="chat">
-    <div id="messages"><em>Loading chat...</em></div>
-    <div id="input-area" style="display:none;">
-      <input id="msgInput" type="text" placeholder="Type your message..." autocomplete="off" />
-      <button id="sendBtn">Send</button>
+    <div id="authSection">
+      <button id="loginBtn">Login with Google</button>
+      <button id="logoutBtn" style="display:none;">Logout</button>
+      <p id="userInfo"></p>
     </div>
+
+    <div id="ownerControls" style="display:none;">
+      <h3>Create New Stream</h3>
+      <input type="text" id="streamName" placeholder="Stream Name" /><br />
+      <input type="text" id="streamDesc" placeholder="Stream Description" /><br />
+      <label>Choose Thumbnail Image:</label><br />
+      <input type="file" id="thumbInput" accept="image/*" /><br />
+      <img id="thumbnailPreview" alt="Thumbnail Preview" src="" /><br />
+      <button id="createStreamBtn">Create Stream</button>
+    </div>
+
+    <hr />
+
+    <div id="streamsListSection" style="display:none;">
+      <h3>Active Streams</h3>
+      <ul id="streamsList"></ul>
+    </div>
+
+    <hr />
+
+    <div id="streamView" style="display:none;">
+      <h3 id="streamTitle"></h3>
+      <p id="streamDescText"></p>
+      <img id="streamThumbnail" src="" alt="Stream Thumbnail" style="width:200px; height:112px; object-fit:cover; border-radius:6px; margin-bottom:10px;" />
+
+      <div id="videoContainer">
+        <video id="liveVideo" autoplay muted playsinline></video>
+      </div>
+
+      <div id="streamControls" style="display:none;">
+        <button id="toggleCamBtn">Turn Camera Off</button>
+        <button id="toggleMicBtn">Turn Mic Off</button>
+      </div>
+
+      <div id="chatSection">
+        <h4>Chat</h4>
+        <div id="chat"></div>
+        <input type="text" id="msgInput" placeholder="Type your message..." />
+        <button id="sendBtn">Send</button>
+      </div>
+    </div>
+
   </div>
-</div>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
-<script>
-  // Config - replace with your Firebase project config
-  const firebaseConfig = {
-    apiKey: "AIzaSyCq74S-8b4maDXEKkDXwoaz28Y_Qf0N_34",
-    authDomain: "livestreamchat-268a9.firebaseapp.com",
-    databaseURL: "https://livestreamchat-268a9-default-rtdb.firebaseio.com",
-    projectId: "livestreamchat-268a9",
-    storageBucket: "livestreamchat-268a9.appspot.com",
-    messagingSenderId: "761482927725",
-    appId: "1:761482927725:web:7d525941da69c424bb6964"
-  };
+  <script>
+    // ====== Your Firebase config ======
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DB_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MSG_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+    const auth = firebase.auth();
+    const db = firebase.database();
+    const storage = firebase.storage();
 
-  const OWNER_EMAIL = "realgyjs@gmail.com";
+    // DOM elements
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const userInfo = document.getElementById('userInfo');
+    const ownerControls = document.getElementById('ownerControls');
+    const streamNameInput = document.getElementById('streamName');
+    const streamDescInput = document.getElementById('streamDesc');
+    const thumbInput = document.getElementById('thumbInput');
+    const thumbnailPreview = document.getElementById('thumbnailPreview');
+    const createStreamBtn = document.getElementById('createStreamBtn');
+    const streamsListSection = document.getElementById('streamsListSection');
+    const streamsList = document.getElementById('streamsList');
+    const streamView = document.getElementById('streamView');
+    const streamTitle = document.getElementById('streamTitle');
+    const streamDescText = document.getElementById('streamDescText');
+    const streamThumbnail = document.getElementById('streamThumbnail');
+    const liveVideo = document.getElementById('liveVideo');
+    const streamControls = document.getElementById('streamControls');
+    const toggleCamBtn = document.getElementById('toggleCamBtn');
+    const toggleMicBtn = document.getElementById('toggleMicBtn');
+    const chat = document.getElementById('chat');
+    const msgInput = document.getElementById('msgInput');
+    const sendBtn = document.getElementById('sendBtn');
 
-  // UI Elements
-  const loginScreen = document.getElementById('login-screen');
-  const loginBtn = document.getElementById('loginBtn');
+    let currentUser = null;
+    let currentStreamId = null;
+    let currentStreamData = null;
 
-  const dashboard = document.getElementById('dashboard');
-  const streamsList = document.getElementById('streams-list');
-  const createForm = document.getElementById('create-stream-form');
-  const streamNameInput = document.getElementById('streamName');
-  const streamDescInput = document.getElementById('streamDesc');
-  const streamThumbInput = document.getElementById('streamThumb');
-  const createStreamBtn = document.getElementById('createStreamBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
+    // Media stream and tracks
+    let mediaStream = null;
+    let videoTrack = null;
+    let audioTrack = null;
 
-  const streamView = document.getElementById('stream-view');
-  const backBtn = document.getElementById('backBtn');
-  const streamTitle = document.getElementById('streamTitle');
-  const streamDescText = document.getElementById('streamDescText');
-  const streamVideo = document.getElementById('streamVideo');
+    // Thumbnail image file
+    let selectedThumbFile = null;
+    let uploadedThumbURL = '';
 
-  // Chat UI
-  const messagesDiv = document.getElementById('messages');
-  const inputArea = document.getElementById('input-area');
-  const msgInput = document.getElementById('msgInput');
-  const sendBtn = document.getElementById('sendBtn');
+    // Owner email - change as needed
+    const OWNER_EMAIL = "realgyjs@gmail.com";
 
-  let currentUser = null;
-  let currentStreamId = null;
-  let messagesRef = null;
-
-  // Auth
-  auth.onAuthStateChanged(user => {
-    if (user) {
+    // Auth state listener
+    auth.onAuthStateChanged(user => {
       currentUser = user;
-      showDashboard();
-    } else {
-      currentUser = null;
-      showLogin();
-    }
-  });
+      if (user) {
+        userInfo.textContent = `Logged in as: ${user.displayName || user.email}`;
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'inline-block';
 
-  function showLogin() {
-    loginScreen.style.display = 'flex';
-    dashboard.style.display = 'none';
-    streamView.style.display = 'none';
-  }
+        // Show owner controls if owner
+        if (user.email === OWNER_EMAIL) {
+          ownerControls.style.display = 'block';
+        } else {
+          ownerControls.style.display = 'none';
+        }
 
-  function showDashboard() {
-    loginScreen.style.display = 'none';
-    dashboard.style.display = 'block';
-    streamView.style.display = 'none';
+        streamsListSection.style.display = 'block';
+        loadStreams();
+      } else {
+        userInfo.textContent = '';
+        loginBtn.style.display = 'inline-block';
+        logoutBtn.style.display = 'none';
+        ownerControls.style.display = 'none';
+        streamsListSection.style.display = 'none';
+        streamView.style.display = 'none';
+      }
+    });
 
-    // Show create stream form only if owner
-    if (currentUser.email === OWNER_EMAIL) {
-      createForm.style.display = 'block';
-    } else {
-      createForm.style.display = 'none';
-    }
+    // Login
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(console.error);
+    };
 
-    loadStreams();
-  }
+    // Logout
+    logoutBtn.onclick = () => auth.signOut();
 
-  // Load streams from DB
-  function loadStreams() {
-    streamsList.innerHTML = 'Loading streams...';
-    db.ref('streams').on('value', snapshot => {
-      streamsList.innerHTML = '';
-      const streams = snapshot.val();
-      if (!streams) {
-        streamsList.textContent = 'No live streams available.';
+    // Thumbnail input change
+    thumbInput.onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file.');
         return;
       }
-      Object.entries(streams).forEach(([id, stream]) => {
-        // Show only active streams
-        if (!stream.active) return;
+      selectedThumbFile = file;
 
-        const card = document.createElement('div');
-        card.className = 'stream-card';
-
-        const img = document.createElement('img');
-        img.src = stream.thumbnail || 'https://via.placeholder.com/220x120?text=No+Thumbnail';
-        card.appendChild(img);
-
-        const title = document.createElement('h3');
-        title.textContent = stream.name;
-        card.appendChild(title);
-
-        const desc = document.createElement('p');
-        desc.textContent = stream.description;
-        card.appendChild(desc);
-
-        card.onclick = () => openStream(id, stream);
-
-        streamsList.appendChild(card);
-      });
-    });
-  }
-
-  // Open stream view
-  function openStream(id, stream) {
-    currentStreamId = id;
-    loginScreen.style.display = 'none';
-    dashboard.style.display = 'none';
-    streamView.style.display = 'block';
-
-    streamTitle.textContent = stream.name;
-    streamDescText.textContent = stream.description;
-    streamVideo.src = stream.streamUrl || ''; // The stream video URL (should be from streaming source)
-    streamVideo.muted = false;
-
-    messagesDiv.innerHTML = '<em>Loading chat...</em>';
-    inputArea.style.display = currentUser ? 'flex' : 'none';
-
-    startListeningChat(id);
-  }
-
-  backBtn.onclick = () => {
-    stopListeningChat();
-    showDashboard();
-  };
-
-  // Listen for chat messages for current stream
-  function startListeningChat(streamId) {
-    messagesRef = db.ref(`messages/${streamId}`).limitToLast(50);
-    messagesRef.on('child_added', snapshot => {
-      const msg = snapshot.val();
-      appendMessage(msg);
-    });
-  }
-
-  function stopListeningChat() {
-    if (messagesRef) messagesRef.off();
-    messagesDiv.innerHTML = '';
-  }
-
-  // Append message to chat UI
-  function appendMessage(msg) {
-    const div = document.createElement('div');
-    div.className = 'chat-message';
-    div.innerHTML = `<strong>${escapeHtml(msg.user)}</strong>: ${escapeHtml(msg.text)}`;
-    messagesDiv.appendChild(div);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
-
-  // Escape HTML
-  function escapeHtml(text) {
-    return text.replace(/[&<>"']/g, (m) => {
-      switch (m) {
-        case '&': return '&amp;';
-        case '<': return '&lt;';
-        case '>': return '&gt;';
-        case '"': return '&quot;';
-        case "'": return '&#39;';
-      }
-    });
-  }
-
-  // Send chat message
-  sendBtn.onclick = () => {
-    sendMessage();
-  };
-  msgInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') sendMessage();
-  });
-
-  function sendMessage() {
-    const text = msgInput.value.trim();
-    if (!text) return;
-    const msgData = {
-      user: currentUser.displayName || currentUser.email.split('@')[0],
-      text,
-      timestamp: Date.now()
+      // Preview
+      const reader = new FileReader();
+      reader.onload = e => {
+        thumbnailPreview.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
     };
-    db.ref(`messages/${currentStreamId}`).push(msgData);
-    msgInput.value = '';
-  }
 
-  // Create new stream (only owner)
-  createStreamBtn.onclick = () => {
-    const name = streamNameInput.value.trim();
-    const desc = streamDescInput.value.trim();
-    const thumb = streamThumbInput.value.trim();
+    // Create Stream
+    createStreamBtn.onclick = async () => {
+      const name = streamNameInput.value.trim();
+      const desc = streamDescInput.value.trim();
+      if (!name || !desc) {
+        alert('Please enter stream name and description.');
+        return;
+      }
+      if (!selectedThumbFile) {
+        alert('Please select a thumbnail image.');
+        return;
+      }
+      createStreamBtn.disabled = true;
 
-    if (!name) return alert('Please enter stream name.');
-    if (!desc) return alert('Please enter description.');
-    if (!thumb) return alert('Please enter thumbnail URL.');
+      // Upload thumbnail to Firebase Storage
+      try {
+        const storageRef = storage.ref();
+        const thumbRef = storageRef.child(`thumbnails/${Date.now()}_${selectedThumbFile.name}`);
+        const snapshot = await thumbRef.put(selectedThumbFile);
+        uploadedThumbURL = await snapshot.ref.getDownloadURL();
 
-    const newStreamRef = db.ref('streams').push();
-    newStreamRef.set({
-      name,
-      description: desc,
-      thumbnail: thumb,
-      owner: currentUser.uid,
-      active: true,
-      streamUrl: '' // You can set actual stream URL here if available
+        // Save stream info in DB
+        const newStreamRef = db.ref('streams').push();
+        await newStreamRef.set({
+          name,
+          description: desc,
+          thumbnail: uploadedThumbURL,
+          owner: currentUser.uid,
+          active: true,
+          streamUrl: '', // placeholder
+          createdAt: firebase.database.ServerValue.TIMESTAMP
+        });
+
+        alert('Stream created successfully!');
+        streamNameInput.value = '';
+        streamDescInput.value = '';
+        thumbInput.value = '';
+        thumbnailPreview.src = '';
+        selectedThumbFile = null;
+        uploadedThumbURL = '';
+        createStreamBtn.disabled = false;
+        loadStreams();
+
+      } catch (err) {
+        console.error(err);
+        alert('Failed to upload thumbnail or create stream.');
+        createStreamBtn.disabled = false;
+      }
+    };
+
+    // Load streams list
+    function loadStreams() {
+      streamsList.innerHTML = '';
+      db.ref('streams').orderByChild('active').equalTo(true).on('value', snapshot => {
+        streamsList.innerHTML = '';
+        if (!snapshot.exists()) {
+          streamsList.innerHTML = '<li>No active streams.</li>';
+          return;
+        }
+        snapshot.forEach(childSnap => {
+          const stream = childSnap.val();
+          const li = document.createElement('li');
+          li.style.cursor = 'pointer';
+          li.textContent = stream.name;
+          li.onclick = () => openStream(childSnap.key, stream);
+          streamsList.appendChild(li);
+        });
+      });
+    }
+
+    // Open stream view
+    async function openStream(streamId, streamData) {
+      currentStreamId = streamId;
+      currentStreamData = streamData;
+
+      streamsListSection.style.display = 'none';
+      streamView.style.display = 'block';
+
+      streamTitle.textContent = streamData.name;
+      streamDescText.textContent = streamData.description;
+      streamThumbnail.src = streamData.thumbnail;
+
+      chat.innerHTML = '';
+
+      // Show chat + controls if owner
+      if (currentUser && currentUser.uid === streamData.owner) {
+        streamControls.style.display = 'block';
+        await startLocalStream();
+      } else {
+        streamControls.style.display = 'none';
+        // For demo, no remote streaming implementation
+        liveVideo.srcObject = null;
+        liveVideo.poster = streamData.thumbnail;
+      }
+
+      loadChat();
+    }
+
+    // Start local media stream for owner (simulate live stream)
+    async function startLocalStream() {
+      try {
+        if (mediaStream) {
+          // Already started
+          return;
+        }
+        mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        liveVideo.srcObject = mediaStream;
+
+        videoTrack = mediaStream.getVideoTracks()[0];
+        audioTrack = mediaStream.getAudioTracks()[0];
+
+        toggleCamBtn.textContent = 'Turn Camera Off';
+        toggleMicBtn.textContent = 'Turn Mic Off';
+      } catch (err) {
+        alert('Could not access camera and mic: ' + err.message);
+      }
+    }
+
+    // Toggle camera
+    toggleCamBtn.onclick = () => {
+      if (!videoTrack) return;
+      videoTrack.enabled = !videoTrack.enabled;
+      toggleCamBtn.textContent = videoTrack.enabled ? 'Turn Camera Off' : 'Turn Camera On';
+    };
+
+    // Toggle mic
+    toggleMicBtn.onclick = () => {
+      if (!audioTrack) return;
+      audioTrack.enabled = !audioTrack.enabled;
+      toggleMicBtn.textContent = audioTrack.enabled ? 'Turn Mic Off' : 'Turn Mic On';
+    };
+
+    // Chat system
+    function loadChat() {
+      const chatRef = db.ref(`messages/${currentStreamId}`);
+      chatRef.off(); // remove old listeners
+
+      chatRef.on('child_added', snap => {
+        const msg = snap.val();
+        const p = document.createElement('p');
+        p.innerHTML = `<strong>${escapeHtml(msg.user)}:</strong> ${escapeHtml(msg.text)}`;
+        chat.appendChild(p);
+        chat.scrollTop = chat.scrollHeight;
+      });
+    }
+
+    sendBtn.onclick = () => {
+      sendMessage();
+    };
+    msgInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendMessage();
     });
 
-    streamNameInput.value = '';
-    streamDescInput.value = '';
-    streamThumbInput.value = '';
-    alert('Stream created successfully.');
-  };
+    function sendMessage() {
+      const text = msgInput.value.trim();
+      if (!text) return;
+      const msgData = {
+        user: currentUser.displayName || currentUser.email.split('@')[0],
+        text,
+        timestamp: Date.now()
+      };
+      db.ref(`messages/${currentStreamId}`).push(msgData);
+      msgInput.value = '';
+    }
 
-  // Login with Google
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  };
-
-  logoutBtn.onclick = () => {
-    auth.signOut();
-  };
-</script>
-
+    // Utility: Escape HTML for chat messages
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, (m) => {
+        switch (m) {
+          case '&': return '&amp;';
+          case '<': return '&lt;';
+          case '>': return '&gt;';
+          case '"': return '&quot;';
+          case "'": return '&#39;';
+        }
+      });
+    }
+  </script>
 </body>
 </html>
