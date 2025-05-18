@@ -1,457 +1,489 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>YouTube-Style Stream Platform</title>
-  <style>
-    body {
-      margin: 0; padding: 0;
-      font-family: Arial, sans-serif;
-      background: #121212;
-      color: white;
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-    }
-    #dashboard {
-      width: 320px;
-      background: #222;
-      border-right: 2px solid #333;
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
-      box-sizing: border-box;
-      overflow-y: auto;
-    }
-    #dashboard h2 {
-      margin: 0 0 15px;
-      color: #ffb400;
-      font-weight: 600;
-    }
-    #user-info {
-      margin-bottom: 15px;
-      font-size: 0.9rem;
-      word-break: break-word;
-    }
-    button {
-      background: #ffb400;
-      border: none;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      font-weight: bold;
-      color: #121212;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-    button:hover:not(:disabled) {
-      background: #e6a500;
-    }
-    button:disabled {
-      background: #555;
-      cursor: not-allowed;
-    }
-    #streams-list {
-      flex-grow: 1;
-      overflow-y: auto;
-      margin-top: 15px;
-    }
-    .stream-item {
-      padding: 10px;
-      border: 1px solid #444;
-      margin-bottom: 10px;
-      border-radius: 6px;
-      background: #333;
-    }
-    .stream-item.live {
-      border-color: #ff4d4d;
-      background: #4d0000;
-    }
-    .stream-item h3 {
-      margin: 0 0 6px;
-      font-size: 1rem;
-      color: #ffb400;
-    }
-    .stream-item small {
-      color: #bbb;
-    }
-    .stream-actions {
-      margin-top: 6px;
-      display: flex;
-      gap: 8px;
-    }
-    #main-view {
-      flex-grow: 1;
-      background: black;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 10px;
-      box-sizing: border-box;
-      position: relative;
-    }
-    video, iframe {
-      max-width: 90vw;
-      max-height: 60vh;
-      border-radius: 10px;
-      background: black;
-      box-shadow: 0 0 15px #ffb400cc;
-    }
-    #stream-title {
-      margin: 15px 0 10px;
-      font-size: 1.5rem;
-      color: #ffb400;
-    }
-    #chat-container {
-      width: 400px;
-      background: #222;
-      display: flex;
-      flex-direction: column;
-      padding: 15px;
-      box-sizing: border-box;
-      border-left: 2px solid #333;
-    }
-    #chat {
-      flex-grow: 1;
-      overflow-y: auto;
-      background: #111;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      font-size: 1.1rem;
-      line-height: 1.4;
-    }
-    .chat-message {
-      margin-bottom: 12px;
-      word-wrap: break-word;
-    }
-    .chat-message strong {
-      color: #ffb400;
-    }
-    #chat-input {
-      width: 100%;
-      padding: 12px;
-      font-size: 1.1rem;
-      border-radius: 6px;
-      border: none;
-      outline: none;
-      background: #333;
-      color: white;
-    }
-    #chat-input:disabled {
-      background: #555;
-      cursor: not-allowed;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Stream Creator & Dashboard with Chat</title>
+<style>
+  body {
+    margin:0; padding:0; font-family: Arial, sans-serif; display: flex; height: 100vh; overflow: hidden;
+  }
+  #container {
+    display: flex; width: 100%; height: 100%;
+  }
+  #mainVideo {
+    flex: 0 0 60%; /* video width */
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+  }
+  video, iframe {
+    width: 100%;
+    max-width: 560px;
+    height: 315px;
+    background: black;
+    border-radius: 8px;
+  }
+  #chatSection {
+    flex: 0 0 40%;
+    background: #f1f1f1;
+    display: flex;
+    flex-direction: column;
+    border-left: 2px solid #ccc;
+    padding: 10px;
+    overflow: hidden;
+  }
+  #chatMessages {
+    flex: 1;
+    overflow-y: auto;
+    background: white;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  #chatInput {
+    display: flex;
+  }
+  #chatInput input {
+    flex: 1;
+    padding: 8px;
+    border-radius: 8px 0 0 8px;
+    border: 1px solid #ccc;
+    border-right: none;
+  }
+  #chatInput button {
+    padding: 8px 12px;
+    border-radius: 0 8px 8px 0;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border-left: none;
+  }
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  #dashboard {
+    position: fixed;
+    top: 10px; left: 10px;
+    width: 320px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 0 10px #aaa;
+    padding: 10px;
+    z-index: 1000;
+  }
+  #dashboard h2 {
+    margin-top: 0;
+    text-align: center;
+  }
+  .stream-item {
+    cursor: pointer;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .stream-item img {
+    width: 80px;
+    height: 45px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+  .stream-info {
+    flex: 1;
+  }
+  .stream-title {
+    font-weight: bold;
+    font-size: 1rem;
+    margin: 0;
+  }
+  .stream-desc {
+    font-size: 0.85rem;
+    color: #555;
+    margin: 3px 0;
+  }
+  .stream-status {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: green;
+  }
+  .stream-status.ended {
+    color: red;
+  }
+
+  #createStreamForm {
+    margin-bottom: 15px;
+  }
+  #createStreamForm input[type=text], #createStreamForm textarea {
+    width: 100%;
+    margin-bottom: 6px;
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+  }
+  #createStreamForm input[type=file] {
+    margin-bottom: 6px;
+  }
+  #createStreamForm button {
+    width: 100%;
+    padding: 8px;
+    background-color: #28a745;
+    color: white;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #endStreamBtn {
+    margin-top: 10px;
+    padding: 8px 20px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #signOutBtn {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: #555;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+</style>
 </head>
 <body>
-  <div id="dashboard">
-    <h2>Stream Dashboard</h2>
-    <div id="user-info">Not signed in</div>
-    <button id="signin-btn">Sign in with Google</button>
-    <button id="create-stream-btn" disabled>Create Stream</button>
-    <div id="streams-list"></div>
+
+<div id="dashboard">
+  <h2>Streams Dashboard</h2>
+
+  <!-- Owner Only: Create Stream -->
+  <div id="createStreamForm" style="display:none;">
+    <input type="text" id="streamTitleInput" placeholder="Stream Title" />
+    <textarea id="streamDescInput" rows="3" placeholder="Stream Description"></textarea>
+    <input type="file" id="thumbnailInput" accept="image/*" />
+    <button id="startLiveBtn">Start Live Stream</button>
   </div>
 
-  <div id="main-view">
-    <div id="stream-title">Select a stream to watch</div>
-    <video id="live-video" controls autoplay muted style="display:none"></video>
-    <iframe id="prerecorded-video" controls style="display:none" frameborder="0" allowfullscreen></iframe>
+  <div id="streamsList"></div>
+</div>
+
+<div id="container">
+  <div id="mainVideo">
+    <h2 id="watchTitle" style="margin: 10px 0;"></h2>
+    <p id="watchDesc" style="margin: 0 0 15px;"></p>
+    <img id="watchThumbnail" style="max-width: 100%; max-height: 180px; border-radius: 8px; display:none; margin-bottom: 10px;" />
+    <video id="liveVideo" autoplay muted playsinline style="display:none; border-radius: 8px;"></video>
+    <iframe id="prerecordedVideo" style="display:none;" frameborder="0" allowfullscreen></iframe>
+    <button id="endStreamBtn" style="display:none;">End Stream</button>
   </div>
 
-  <div id="chat-container">
-    <div id="chat"></div>
-    <input id="chat-input" placeholder="Type a message..." disabled />
+  <div id="chatSection">
+    <h3>Live Chat</h3>
+    <div id="chatMessages"></div>
+    <div id="chatInput">
+      <input type="text" id="chatMessageInput" placeholder="Type a message..." />
+      <button id="sendChatBtn">Send</button>
+    </div>
   </div>
+</div>
+
+<button id="signOutBtn" style="display:none;">Sign Out</button>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
 <script>
-  // Firebase config
+  // Your Firebase config here:
   const firebaseConfig = {
     apiKey: "AIzaSyCq74S-8b4maDXEKkDXwoaz28Y_Qf0N_34",
     authDomain: "livestreamchat-268a9.firebaseapp.com",
     databaseURL: "https://livestreamchat-268a9-default-rtdb.firebaseio.com",
     projectId: "livestreamchat-268a9",
-    storageBucket: "livestreamchat-268a9.firebasestorage.app",
+    storageBucket: "livestreamchat-268a9.appspot.com",
     messagingSenderId: "761482927725",
     appId: "1:761482927725:web:7d525941da69c424bb6964"
   };
 
   firebase.initializeApp(firebaseConfig);
+
   const auth = firebase.auth();
   const db = firebase.database();
+  const storage = firebase.storage();
 
-  // Elements
-  const signinBtn = document.getElementById('signin-btn');
-  const userInfo = document.getElementById('user-info');
-  const createStreamBtn = document.getElementById('create-stream-btn');
-  const streamsList = document.getElementById('streams-list');
-  const liveVideo = document.getElementById('live-video');
-  const prerecordedVideo = document.getElementById('prerecorded-video');
-  const streamTitle = document.getElementById('stream-title');
-  const chat = document.getElementById('chat');
-  const chatInput = document.getElementById('chat-input');
-
-  const allowedStreamerEmail = "realgyjs@gmail.com";
-
+  const streamsRef = db.ref('streams');
   let currentUser = null;
   let currentStreamId = null;
-  let screenStream = null;
-  let chatMessagesRef = null;
+  let chatRef = null;
 
-  // UTIL: escape html
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
+  // DOM Elements
+  const createForm = document.getElementById('createStreamForm');
+  const streamsList = document.getElementById('streamsList');
+  const watchTitle = document.getElementById('watchTitle');
+  const watchDesc = document.getElementById('watchDesc');
+  const watchThumbnail = document.getElementById('watchThumbnail');
+  const liveVideo = document.getElementById('liveVideo');
+  const prerecordedVideo = document.getElementById('prerecordedVideo');
+  const endStreamBtn = document.getElementById('endStreamBtn');
 
-  // Sign in
-  signinBtn.onclick = async () => {
+  const chatMessages = document.getElementById('chatMessages');
+  const chatMessageInput = document.getElementById('chatMessageInput');
+  const sendChatBtn = document.getElementById('sendChatBtn');
+
+  const signOutBtn = document.getElementById('signOutBtn');
+
+  // Login with Google
+  async function signIn() {
     const provider = new firebase.auth.GoogleAuthProvider();
     try {
-      const result = await auth.signInWithPopup(provider);
-      currentUser = result.user;
-      userInfo.textContent = `Signed in as: ${currentUser.email}`;
-      signinBtn.style.display = 'none';
-
-      if(currentUser.email === allowedStreamerEmail) {
-        createStreamBtn.disabled = false;
-        userInfo.textContent += " (You can create streams)";
-      } else {
-        createStreamBtn.disabled = true;
-        userInfo.textContent += " (View only)";
-      }
-      chatInput.disabled = false;
-      listenStreams();
+      await auth.signInWithPopup(provider);
     } catch(e) {
-      alert("Sign in failed: " + e.message);
+      alert('Sign in failed: ' + e.message);
     }
-  };
+  }
 
-  // Listen for streams in DB and update dashboard
-  function listenStreams() {
-    const streamsRef = db.ref('streams');
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if (user) {
+      signOutBtn.style.display = 'block';
+      if(user.email === 'realgyjs@gmail.com') {
+        createForm.style.display = 'block';
+      } else {
+        createForm.style.display = 'none';
+      }
+      loadStreamsDashboard();
+    } else {
+      signOutBtn.style.display = 'none';
+      createForm.style.display = 'none';
+      streamsList.innerHTML = '<p>Please <button onclick="signIn()">Sign in with Google</button> to use the app.</p>';
+      clearWatch();
+    }
+  });
+
+  signOutBtn.onclick = () => auth.signOut();
+
+  // Load streams dashboard
+  function loadStreamsDashboard() {
+    streamsRef.off();
     streamsRef.on('value', snapshot => {
       const streams = snapshot.val() || {};
       streamsList.innerHTML = '';
-      for(const id in streams) {
+      for(let id in streams) {
         const s = streams[id];
         const div = document.createElement('div');
-        div.classList.add('stream-item');
-        if(s.status === 'live') div.classList.add('live');
-
+        div.className = 'stream-item';
         div.innerHTML = `
-          <h3>${escapeHtml(s.title)}</h3>
-          <small>${s.status === 'live' ? 'Live' : 'Ended'} by ${escapeHtml(s.ownerEmail)}</small>
-          <div class="stream-actions"></div>
+          <img src="${escapeHtml(s.thumbnailURL || '')}" alt="Thumbnail" />
+          <div class="stream-info">
+            <p class="stream-title">${escapeHtml(s.title)}</p>
+            <p class="stream-desc">${escapeHtml(s.description || '')}</p>
+            <p class="stream-status ${s.status === 'ended' ? 'ended' : ''}">${s.status.toUpperCase()}</p>
+          </div>
         `;
+        div.onclick = () => watchStream(id, s);
         streamsList.appendChild(div);
-
-        const actions = div.querySelector('.stream-actions');
-
-        // Watch button
-        const watchBtn = document.createElement('button');
-        watchBtn.textContent = 'Watch';
-        watchBtn.onclick = () => watchStream(id, s);
-        actions.appendChild(watchBtn);
-
-        // If owner and live: show end stream button
-        if(currentUser && s.ownerEmail === currentUser.email && s.status === 'live') {
-          const endBtn = document.createElement('button');
-          endBtn.textContent = 'End Stream';
-          endBtn.onclick = () => endStream(id);
-          actions.appendChild(endBtn);
-        }
       }
     });
   }
 
-  // Create stream: live screen share or prerecorded URL prompt
-  createStreamBtn.onclick = async () => {
-    if(!currentUser) return alert("Sign in first.");
-    const choice = prompt("Type 'live' for live screen share, or enter a prerecorded video URL:");
-
-    if(!choice) return;
-
-    if(choice.toLowerCase() === 'live') {
-      // Start screen share
-      try {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({video:true, audio:true});
-      } catch(e) {
-        return alert("Screen share failed: " + e.message);
-      }
-
-      // Create live stream entry in DB
-      const streamRef = db.ref('streams').push();
-      const streamId = streamRef.key;
-      const title = prompt("Enter your stream title:", "My Live Stream") || "Untitled Stream";
-
-      await streamRef.set({
-        title,
-        ownerEmail: currentUser.email,
-        status: 'live',
-        createdAt: Date.now(),
-        type: 'live'
-      });
-
-      // Show this live stream in main view
-      watchStream(streamId, {
-        title, ownerEmail: currentUser.email, status: 'live', type: 'live'
-      });
-
-      // Show the local screen share on video tag
-      liveVideo.srcObject = screenStream;
-      liveVideo.muted = true;
-      liveVideo.style.display = 'block';
-      prerecordedVideo.style.display = 'none';
-      streamTitle.textContent = title;
-
-      currentStreamId = streamId;
-
-      // TODO: streaming video to viewers requires server or WebRTC signaling
-      // For this demo, we just show local video only to streamer
-
-      alert("Live stream created (local only demo). Real streaming requires backend and WebRTC.");
-
+  // Watch Stream
+  async function watchStream(streamId, stream) {
+    currentStreamId = streamId;
+    watchTitle.textContent = stream.title;
+    watchDesc.textContent = stream.description || '';
+    if(stream.thumbnailURL) {
+      watchThumbnail.style.display = 'block';
+      watchThumbnail.src = stream.thumbnailURL;
     } else {
-      // Prerecorded video
-      const videoURL = choice.trim();
-      const title = prompt("Enter video title:", "Prerecorded Video") || "Untitled Video";
-
-      // Save prerecorded stream in DB
-      const streamRef = db.ref('streams').push();
-      const streamId = streamRef.key;
-      await streamRef.set({
-        title,
-        ownerEmail: currentUser.email,
-        status: 'ended',
-        createdAt: Date.now(),
-        type: 'prerecorded',
-        videoURL
-      });
-
-      alert("Prerecorded video added. Select it from dashboard to watch.");
+      watchThumbnail.style.display = 'none';
     }
+
+    if (stream.status === 'live') {
+      // Assume stream.videoURL is a live HLS stream or webcam video URL, here we fake with webcam for demo
+      prerecordedVideo.style.display = 'none';
+      liveVideo.style.display = 'block';
+      startFakeWebcam();
+      if(currentUser.email === 'realgyjs@gmail.com') {
+        endStreamBtn.style.display = 'inline-block';
+      } else {
+        endStreamBtn.style.display = 'none';
+      }
+    } else {
+      liveVideo.style.display = 'none';
+      endStreamBtn.style.display = 'none';
+      if (stream.videoURL) {
+        prerecordedVideo.style.display = 'block';
+        prerecordedVideo.src = stream.videoURL;
+      } else {
+        prerecordedVideo.style.display = 'none';
+      }
+    }
+    setupChat(streamId);
+  }
+
+  // Clear watch section
+  function clearWatch() {
+    watchTitle.textContent = '';
+    watchDesc.textContent = '';
+    watchThumbnail.style.display = 'none';
+    liveVideo.style.display = 'none';
+    prerecordedVideo.style.display = 'none';
+    endStreamBtn.style.display = 'none';
+    stopFakeWebcam();
+    clearChat();
+  }
+
+  // Fake webcam stream for demo live video (since no actual streaming service here)
+  let fakeStream = null;
+  async function startFakeWebcam() {
+    if(fakeStream) return;
+    try {
+      fakeStream = await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+      liveVideo.srcObject = fakeStream;
+      liveVideo.play();
+    } catch(e) {
+      alert('Unable to access webcam for live demo: ' + e.message);
+    }
+  }
+  function stopFakeWebcam() {
+    if(fakeStream) {
+      fakeStream.getTracks().forEach(t=>t.stop());
+      liveVideo.srcObject = null;
+      fakeStream = null;
+    }
+  }
+
+  // Create stream
+  document.getElementById('startLiveBtn').onclick = async () => {
+    const title = document.getElementById('streamTitleInput').value.trim();
+    const desc = document.getElementById('streamDescInput').value.trim();
+    const thumbnailFile = document.getElementById('thumbnailInput').files[0];
+
+    if (!title) {
+      alert('Title required');
+      return;
+    }
+    if (!thumbnailFile) {
+      alert('Thumbnail image required');
+      return;
+    }
+
+    // Upload thumbnail
+    const thumbRef = storage.ref('thumbnails/' + Date.now() + '_' + thumbnailFile.name);
+    const uploadTask = thumbRef.put(thumbnailFile);
+    uploadTask.on('state_changed', null, error => alert('Upload failed: '+error.message));
+    await uploadTask;
+
+    const thumbnailURL = await thumbRef.getDownloadURL();
+
+    // Create stream entry
+    const newStreamRef = streamsRef.push();
+    await newStreamRef.set({
+      title,
+      description: desc,
+      thumbnailURL,
+      status: 'live',
+      createdBy: currentUser.uid,
+      createdAt: Date.now(),
+      videoURL: null // For demo, no real video URL
+    });
+
+    // Reset form
+    document.getElementById('streamTitleInput').value = '';
+    document.getElementById('streamDescInput').value = '';
+    document.getElementById('thumbnailInput').value = '';
+
+    loadStreamsDashboard();
   };
 
-  // End live stream
-  async function endStream(streamId) {
-    if(!currentUser) return;
-    const streamRef = db.ref(`streams/${streamId}`);
-    const snapshot = await streamRef.get();
-    if(!snapshot.exists()) return alert("Stream not found");
-    const stream = snapshot.val();
-    if(stream.ownerEmail !== currentUser.email) return alert("Not your stream");
+  // End stream button (owner only)
+  endStreamBtn.onclick = async () => {
+    if(!currentStreamId) return;
+    if(!confirm('Are you sure you want to end this live stream?')) return;
 
-    await streamRef.update({status: 'ended'});
+    await streamsRef.child(currentStreamId).update({
+      status: 'ended',
+      endedAt: Date.now(),
+      // For demo, we set a prerecorded video URL
+      videoURL: 'https://www.w3schools.com/html/mov_bbb.mp4'
+    });
 
-    if(currentStreamId === streamId) {
-      // Stop local screen sharing stream
-      if(screenStream) {
-        screenStream.getTracks().forEach(t => t.stop());
-        screenStream = null;
-      }
-      liveVideo.srcObject = null;
-      liveVideo.style.display = 'none';
-      prerecordedVideo.style.display = 'none';
-      streamTitle.textContent = "Select a stream to watch";
-      currentStreamId = null;
+    loadStreamsDashboard();
+    clearWatch();
+  };
+
+  // Chat system
+  function setupChat(streamId) {
+    if(chatRef) {
+      chatRef.off();
     }
+    chatMessages.innerHTML = '';
+    chatRef = db.ref('chats/' + streamId);
+    chatRef.on('child_added', snapshot => {
+      const msg = snapshot.val();
+      displayChatMessage(msg);
+    });
+  }
+  function clearChat() {
+    if(chatRef) {
+      chatRef.off();
+      chatRef = null;
+    }
+    chatMessages.innerHTML = '';
   }
 
-  // Watch stream
-  async function watchStream(id, streamData) {
-    currentStreamId = id;
-
-    // Clear chat
-    chat.innerHTML = '';
-    if(chatMessagesRef) chatMessagesRef.off();
-
-    streamTitle.textContent = streamData.title;
-
-    if(streamData.type === 'live') {
-      // Show live video tag, but actual remote live streaming is not implemented in this demo.
-      liveVideo.style.display = 'block';
-      prerecordedVideo.style.display = 'none';
-
-      if(currentUser && currentUser.email === streamData.ownerEmail) {
-        liveVideo.srcObject = screenStream;
-      } else {
-        liveVideo.srcObject = null;
-        liveVideo.poster = '';
-        liveVideo.controls = true;
-        liveVideo.muted = false;
-        liveVideo.src = ''; // No actual live stream feed for viewers in demo
-        alert("Live streaming to viewers requires backend and WebRTC - not implemented in this demo.");
-      }
-
-    } else {
-      // Show prerecorded iframe (YouTube or direct mp4 links)
-      liveVideo.style.display = 'none';
-      prerecordedVideo.style.display = 'block';
-      // If it's a direct mp4 URL, use video tag instead (for demo simplicity we'll just embed)
-      if(streamData.videoURL.match(/\.(mp4|webm|ogg)$/)) {
-        // Use video tag for direct video files
-        prerecordedVideo.style.display = 'none';
-        liveVideo.style.display = 'block';
-        liveVideo.srcObject = null;
-        liveVideo.src = streamData.videoURL;
-        liveVideo.controls = true;
-        liveVideo.muted = false;
-      } else {
-        // Embed YouTube or other links in iframe
-        prerecordedVideo.src = streamData.videoURL;
-      }
-    }
-
-    // Enable chat input for signed-in users
-    chatInput.disabled = !currentUser;
-
-    if(currentUser) {
-      // Listen to chat messages for this stream
-      chatMessagesRef = db.ref(`chats/${id}`);
-      chatMessagesRef.on('child_added', snapshot => {
-        const msg = snapshot.val();
-        const msgEl = document.createElement('div');
-        msgEl.classList.add('chat-message');
-        msgEl.innerHTML = `<strong>${escapeHtml(msg.user)}:</strong> ${escapeHtml(msg.text)}`;
-        chat.appendChild(msgEl);
-        chat.scrollTop = chat.scrollHeight;
-      });
-    }
+  function displayChatMessage(msg) {
+    const div = document.createElement('div');
+    div.style.marginBottom = '8px';
+    div.innerHTML = `<strong>${escapeHtml(msg.name)}:</strong> ${escapeHtml(msg.text)}`;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
-  // Send chat message
-  chatInput.addEventListener('keydown', async e => {
-    if(e.key === 'Enter' && currentUser && currentStreamId && chatInput.value.trim()) {
-      const msg = chatInput.value.trim();
-      chatInput.value = '';
-      const chatRef = db.ref(`chats/${currentStreamId}`);
-      await chatRef.push({
-        user: currentUser.email,
-        text: msg,
-        createdAt: Date.now()
-      });
+  sendChatBtn.onclick = () => {
+    if(!currentUser || !chatRef) {
+      alert('Sign in and select a stream first');
+      return;
     }
-  });
+    const text = chatMessageInput.value.trim();
+    if(!text) return;
+    const msgData = {
+      uid: currentUser.uid,
+      name: currentUser.displayName || 'Anon',
+      text,
+      timestamp: Date.now()
+    };
+    chatRef.push(msgData);
+    chatMessageInput.value = '';
+  };
 
-  // Auto-listen streams if signed in already
-  auth.onAuthStateChanged(user => {
-    if(user) {
-      currentUser = user;
-      userInfo.textContent = `Signed in as: ${user.email}`;
-      signinBtn.style.display = 'none';
-      createStreamBtn.disabled = user.email === allowedStreamerEmail ? false : true;
-      listenStreams();
-      chatInput.disabled = false;
-    }
-  });
+  // Utility escape HTML
+  function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/[&<>"']/g, m => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    })[m]);
+  }
 </script>
+
 </body>
 </html>
