@@ -1,16 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>YouTube Login Chat</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <title>YouTube Chat Login</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    #chatBox { border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; margin-bottom: 10px; }
+    .msg { margin: 5px 0; }
+    .username { font-weight: bold; }
+  </style>
 </head>
 <body>
+  <h2>Live Chat (YouTube Login)</h2>
   <button onclick="signInWithYouTube()">Sign in with YouTube</button>
-  <div id="status"></div>
+  <p id="status">Not signed in</p>
+
+  <div id="chatBox"></div>
+
+  <input id="messageInput" placeholder="Type a message..." />
+  <button onclick="sendMessage()">Send</button>
 
   <script>
+    // Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCq74S-8b4maDXEKkDXwoaz28Y_Qf0N_34",
       authDomain: "livestreamchat-268a9.firebaseapp.com",
@@ -22,6 +35,9 @@
     };
 
     firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let currentUserName = null;
 
     async function signInWithYouTube() {
       const provider = new firebase.auth.GoogleAuthProvider();
@@ -31,27 +47,46 @@
         const result = await firebase.auth().signInWithPopup(provider);
         const token = result.credential.accessToken;
 
-        const response = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+        const res = await fetch("https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true", {
+          headers: { Authorization: `Bearer ${token}` }
         });
 
-        const data = await response.json();
-
+        const data = await res.json();
         if (data.items && data.items.length > 0) {
-          const channelName = data.items[0].snippet.title;
-          document.getElementById("status").textContent = `Signed in as: ${channelName}`;
-          // You can now send messages using channelName
+          currentUserName = data.items[0].snippet.title;
+          document.getElementById("status").textContent = "Signed in as: " + currentUserName;
         } else {
-          document.getElementById("status").textContent = "Channel not found.";
+          document.getElementById("status").textContent = "YouTube channel not found.";
         }
-
       } catch (error) {
         console.error("Sign-in failed:", error);
-        document.getElementById("status").textContent = `Sign-in failed: ${error.message}`;
+        document.getElementById("status").textContent = "Sign-in failed: " + error.message;
       }
     }
+
+    function sendMessage() {
+      const message = document.getElementById("messageInput").value;
+      if (!currentUserName || !message) return;
+
+      db.ref("chat").push({
+        name: currentUserName,
+        text: message,
+        timestamp: Date.now()
+      });
+
+      document.getElementById("messageInput").value = "";
+    }
+
+    // Live chat listener
+    db.ref("chat").on("child_added", (snap) => {
+      const msg = snap.val();
+      const chatBox = document.getElementById("chatBox");
+      const div = document.createElement("div");
+      div.className = "msg";
+      div.innerHTML = `<span class="username">${msg.name}:</span> ${msg.text}`;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
   </script>
 </body>
 </html>
