@@ -2,35 +2,81 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Live Chat + Stream</title>
+  <title>Live Dashboard + Chat</title>
   <style>
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      display: flex;
-      height: 100vh;
       background: #121212;
       color: #eee;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
+    #loginScreen {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #1e1e1e;
+      flex-direction: column;
+      gap: 10px;
+    }
+    button {
+      background: #3a3a3a;
+      border: none;
+      color: #eee;
+      padding: 8px 20px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-weight: 600;
+      transition: background 0.3s ease;
+    }
+    button:hover { background: #007bff; }
+    button:disabled { background: #555; cursor: not-allowed; }
 
-    #stream {
+    #dashboard {
+      display: none;
+      flex: 1;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #mainArea {
       flex: 2;
+      display: flex;
+      flex-direction: column;
+      background: #000;
+      border-right: 2px solid #333;
+      position: relative;
+      overflow: hidden;
+    }
+    #livePreviewOwner, #livePreviewUser {
+      width: 100%;
+      height: 60vh;
+      background: #111;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: #000;
-      border-right: 2px solid #333;
-      position: relative;
+      color: #00ff99;
+      padding: 20px;
+      box-sizing: border-box;
     }
-
-    video#screenVideo {
+    video#ownerStreamVideo, video#userStreamVideo {
       width: 100%;
       height: 100%;
       object-fit: contain;
+      background: black;
+      border-radius: 6px;
+      flex-grow: 1;
     }
-
+    #liveInfo {
+      margin-top: 12px;
+      text-align: center;
+    }
     #viewerCount {
       position: absolute;
       top: 10px;
@@ -40,9 +86,35 @@
       border-radius: 6px;
       font-size: 14px;
       color: #00ff99;
+      user-select: none;
     }
-
-    #chat {
+    #createLiveForm {
+      flex: 1;
+      background: #1e1e1e;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-sizing: border-box;
+    }
+    #createLiveForm input, #createLiveForm textarea {
+      background: #222;
+      border: none;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 14px;
+      color: #eee;
+      resize: none;
+    }
+    #createLiveForm textarea {
+      height: 80px;
+    }
+    #createLiveForm button {
+      background: #007bff;
+      font-weight: 700;
+      margin-top: auto;
+    }
+    #chatArea {
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -50,29 +122,6 @@
       border-left: 2px solid #333;
       padding: 10px;
     }
-
-    #auth-area {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-
-    button {
-      background: #3a3a3a;
-      border: none;
-      color: #eee;
-      padding: 8px 12px;
-      cursor: pointer;
-      border-radius: 4px;
-      font-weight: 600;
-      transition: background 0.3s ease;
-      flex: 1;
-      margin: 0 5px;
-    }
-
-    button:hover { background: #007bff; }
-    button:disabled { background: #555; cursor: not-allowed; }
-
     #messages {
       flex: 1;
       overflow-y: auto;
@@ -82,15 +131,14 @@
       font-size: 14px;
       line-height: 1.4;
       box-shadow: inset 0 0 10px #000;
+      margin-bottom: 10px;
     }
-
     .chat-message {
       display: flex;
       align-items: center;
       margin-bottom: 10px;
       word-break: break-word;
     }
-
     .chat-message img {
       width: 32px;
       height: 32px;
@@ -100,22 +148,18 @@
       border: 2px solid #007bff;
       background: #222;
     }
-
     .chat-message span {
       color: #ccc;
     }
-
     .chat-message .owner {
       font-weight: 700;
       color: #00ff99;
     }
-
     #input-area {
       display: flex;
       margin-top: 10px;
       gap: 8px;
     }
-
     #msgInput {
       flex: 1;
       padding: 10px 12px;
@@ -125,9 +169,7 @@
       background: #222;
       color: #eee;
     }
-
     #msgInput:focus { outline: none; background: #333; }
-
     #sendBtn {
       flex-shrink: 0;
       padding: 10px 20px;
@@ -135,28 +177,78 @@
       background: #007bff;
       font-weight: 600;
     }
-
     #sendBtn:hover { background: #0056b3; }
-
     em { color: #666; }
+    #smallLivePreview {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      width: 280px;
+      background: #222;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #00ff99cc;
+      padding: 12px;
+      color: #00ff99;
+      font-size: 14px;
+      user-select: none;
+      display: none;
+      cursor: pointer;
+      z-index: 999;
+    }
+    #smallLivePreview h4 {
+      margin: 0 0 6px 0;
+      font-weight: 700;
+    }
+    #smallLivePreview p {
+      margin: 0;
+      font-size: 12px;
+      color: #aaffcc;
+    }
   </style>
 </head>
 <body>
-  <div id="stream">
-    <div id="viewerCount">👁️ Viewers: 0</div>
-    <video id="screenVideo" autoplay muted></video>
+
+  <div id="loginScreen">
+    <button id="loginBtn">Sign in with Google</button>
   </div>
 
-  <div id="chat">
-    <div id="auth-area">
-      <button id="loginBtn">Sign in with Google</button>
-      <button id="logoutBtn" style="display:none;">Logout</button>
-      <button id="shareBtn" style="display:none;">Share Screen</button>
+  <div id="dashboard">
+    <div id="mainArea">
+      <!-- Owner create live form -->
+      <div id="createLiveForm" style="display:none;">
+        <h2>Create Live Stream</h2>
+        <input type="text" id="liveName" placeholder="Live Stream Name" />
+        <textarea id="liveDescription" placeholder="Live Stream Description"></textarea>
+        <button id="createLiveBtn">Create & Share Screen</button>
+      </div>
+
+      <!-- Owner live preview -->
+      <div id="livePreviewOwner" style="display:none; flex-direction: column;">
+        <video id="ownerStreamVideo" autoplay muted playsinline></video>
+        <div id="liveInfo">
+          <h2 id="ownerLiveName"></h2>
+          <p id="ownerLiveDesc"></p>
+        </div>
+        <div id="viewerCount">👁️ Viewers: 0</div>
+      </div>
+
+      <!-- Normal user live preview -->
+      <div id="livePreviewUser" style="display:none; flex-direction: column; text-align: center;">
+        <p><strong>Live Now:</strong></p>
+        <div id="userLiveName" style="font-weight: 700; font-size: 18px;"></div>
+        <div id="userLiveDesc" style="font-size: 14px; color: #aaa; margin-bottom: 8px;"></div>
+        <p style="color:#666; font-size: 12px;">Live video preview is only visible to the owner.</p>
+        <div id="viewerCountUser">👁️ Viewers: 0</div>
+      </div>
     </div>
-    <div id="messages"><em>Please sign in to chat</em></div>
-    <div id="input-area" style="display:none;">
-      <input id="msgInput" type="text" placeholder="Type your message..." autocomplete="off" />
-      <button id="sendBtn">Send</button>
+
+    <div id="chatArea">
+      <div id="messages"><em>Please join a live stream to chat</em></div>
+      <div id="input-area" style="display:none;">
+        <input id="msgInput" type="text" placeholder="Type your message..." autocomplete="off" />
+        <button id="sendBtn">Send</button>
+      </div>
+      <button id="logoutBtn" style="margin-top:10px; background:#aa2222;">Logout</button>
     </div>
   </div>
 
@@ -180,134 +272,320 @@
     const auth = firebase.auth();
     const db = firebase.database();
 
-    const STREAM_OWNER_EMAIL = "realgyjs@gmail.com"; // 🔥 YOUR EMAIL HERE
+    const STREAM_OWNER_EMAIL = "realgyjs@gmail.com";
 
+    // UI elements
+    const loginScreen = document.getElementById('loginScreen');
     const loginBtn = document.getElementById('loginBtn');
+
+    const dashboard = document.getElementById('dashboard');
     const logoutBtn = document.getElementById('logoutBtn');
-    const shareBtn = document.getElementById('shareBtn');
+
+    const createLiveForm = document.getElementById('createLiveForm');
+    const liveNameInput = document.getElementById('liveName');
+    const liveDescInput = document.getElementById('liveDescription');
+    const createLiveBtn = document.getElementById('createLiveBtn');
+
+    const livePreviewOwner = document.getElementById('livePreviewOwner');
+    const ownerStreamVideo = document.getElementById('ownerStreamVideo');
+    const ownerLiveName = document.getElementById('ownerLiveName');
+    const ownerLiveDesc = document.getElementById('ownerLiveDesc');
     const viewerCount = document.getElementById('viewerCount');
+
+    const livePreviewUser = document.getElementById('livePreviewUser');
+    const userLiveName = document.getElementById('userLiveName');
+    const userLiveDesc = document.getElementById('userLiveDesc');
+    const viewerCountUser = document.getElementById('viewerCountUser');
 
     const messagesDiv = document.getElementById('messages');
     const msgInput = document.getElementById('msgInput');
     const sendBtn = document.getElementById('sendBtn');
     const inputArea = document.getElementById('input-area');
-    const screenVideo = document.getElementById('screenVideo');
 
     let currentUser = null;
-    let messagesRef = null;
+    let liveStreamDataRef = null;
+    let liveMessagesRef = null;
+    let liveViewersRef = null;
     let viewerRef = null;
+    let ownerStream = null;
 
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        currentUser = user;
-        loginBtn.style.display = 'none';
-        logoutBtn.style.display = 'inline-block';
-        inputArea.style.display = 'flex';
+    // Track if owner live is active
+    let liveActive = false;
 
-        // Only owner can share screen
-        if (user.email === STREAM_OWNER_EMAIL) {
-          shareBtn.style.display = 'inline-block';
-        } else {
-          shareBtn.style.display = 'none';
-        }
-
-        messagesDiv.innerHTML = '';
-        startListeningMessages();
-        updateViewers(true);
-      } else {
-        currentUser = null;
-        loginBtn.style.display = 'inline-block';
-        logoutBtn.style.display = 'none';
-        shareBtn.style.display = 'none';
-        inputArea.style.display = 'none';
-        messagesDiv.innerHTML = '<em>Please sign in to chat</em>';
-        stopListeningMessages();
-        updateViewers(false);
-      }
-    });
-
+    // Login flow
     loginBtn.onclick = () => {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).catch(e => alert('Sign-in error: ' + e.message));
+      auth.signInWithPopup(provider).catch(console.error);
     };
 
-    logoutBtn.onclick = () => auth.signOut();
-
-    sendBtn.onclick = () => {
-      if (!currentUser) return;
-      const text = msgInput.value.trim();
-      if (!text) return;
-
-      db.ref('messages').push({
-        user: currentUser.displayName || "Anonymous",
-        photoURL: currentUser.photoURL,
-        text: text,
-        timestamp: Date.now()
-      });
-
-      msgInput.value = '';
+    logoutBtn.onclick = () => {
+      stopStreamingIfOwner();
+      auth.signOut();
     };
 
-    msgInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') sendBtn.click();
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        currentUser = user;
+        loginScreen.style.display = 'none';
+        dashboard.style.display = 'flex';
+        if (user.email === STREAM_OWNER_EMAIL) {
+          // Owner dashboard
+          createLiveForm.style.display = 'flex';
+          livePreviewOwner.style.display = 'none';
+          livePreviewUser.style.display = 'none';
+          inputArea.style.display = 'none';
+          messagesDiv.innerHTML = '<em>Create a live stream to start chatting</em>';
+          setupOwnerListeners();
+        } else {
+          // Normal user dashboard
+          createLiveForm.style.display = 'none';
+          livePreviewOwner.style.display = 'none';
+          livePreviewUser.style.display = 'none';
+          inputArea.style.display = 'none';
+          messagesDiv.innerHTML = '<em>Waiting for a live stream...</em>';
+          setupViewerListeners();
+        }
+      } else {
+        currentUser = null;
+        loginScreen.style.display = 'flex';
+        dashboard.style.display = 'none';
+        stopStreamingIfOwner();
+        cleanupListeners();
+      }
     });
 
-    function startListeningMessages() {
-      messagesRef = db.ref('messages').limitToLast(50);
-      messagesRef.on('child_added', snapshot => {
-        const msg = snapshot.val();
-        const msgElem = document.createElement('div');
-        msgElem.className = 'chat-message';
+    // Owner create live stream
+    createLiveBtn.onclick = async () => {
+      const name = liveNameInput.value.trim();
+      const desc = liveDescInput.value.trim();
+      if (!name) return alert("Enter a live stream name.");
 
-        const img = document.createElement('img');
-        img.src = msg.photoURL || 'https://via.placeholder.com/30';
-        img.alt = 'PFP';
-
-        const span = document.createElement('span');
-        if (msg.user === (currentUser.displayName || "Anonymous")) {
-          span.textContent = `${msg.user}: ${msg.text}`;
-          span.className = 'owner';
-        } else {
-          span.textContent = `${msg.user}: ${msg.text}`;
-        }
-
-        msgElem.appendChild(img);
-        msgElem.appendChild(span);
-        messagesDiv.appendChild(msgElem);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-      });
-    }
-
-    function stopListeningMessages() {
-      if (messagesRef) messagesRef.off();
-    }
-
-    // Viewer counter
-    function updateViewers(isJoining) {
-      const viewersRef = db.ref("viewers");
-
-      if (isJoining && currentUser) {
-        viewerRef = viewersRef.child(currentUser.uid);
-        viewerRef.set(true);
-        viewerRef.onDisconnect().remove();
-      } else if (viewerRef) {
-        viewerRef.remove();
+      if (liveActive) {
+        alert("You already have an active live stream.");
+        return;
       }
 
-      viewersRef.on("value", snapshot => {
-        const count = snapshot.numChildren();
-        viewerCount.textContent = `👁️ Viewers: ${count}`;
-      });
-    }
-
-    shareBtn.onclick = async () => {
       try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        screenVideo.srcObject = stream;
-      } catch (err) {
-        alert("Screen share failed: " + err.message);
+        // Start screen capture
+        ownerStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        ownerStreamVideo.srcObject = ownerStream;
+
+        // Create live stream data in DB
+        liveStreamDataRef = db.ref('liveStreams/owner');
+        await liveStreamDataRef.set({
+          name,
+          description: desc,
+          owner: currentUser.uid,
+          startedAt: Date.now(),
+          viewerCount: 0
+        });
+
+        // Setup messages and viewers refs
+        liveMessagesRef = db.ref('liveMessages/owner');
+        liveViewersRef = db.ref('liveViewers/owner');
+
+        // Mark live active
+        liveActive = true;
+
+        // UI switch
+        createLiveForm.style.display = 'none';
+        livePreviewOwner.style.display = 'flex';
+        inputArea.style.display = 'flex';
+        messagesDiv.innerHTML = '';
+
+        ownerLiveName.textContent = name;
+        ownerLiveDesc.textContent = desc;
+        updateViewerCountUI(0);
+
+        setupChatListeners();
+        setupViewerCountListeners();
+
+        // Add self as viewer
+        addViewer();
+
+        // When stream ends (user stops sharing)
+        ownerStream.getVideoTracks()[0].onended = () => {
+          endLiveStream();
+        };
+      } catch (e) {
+        alert("Failed to get screen capture: " + e.message);
       }
     };
+
+    function updateViewerCountUI(count) {
+      viewerCount.textContent = `👁️ Viewers: ${count}`;
+      viewerCountUser.textContent = `👁️ Viewers: ${count}`;
+    }
+
+    function endLiveStream() {
+      if (!liveActive) return;
+      liveActive = false;
+
+      // Remove live stream info
+      if (liveStreamDataRef) liveStreamDataRef.remove();
+
+      if (liveMessagesRef) liveMessagesRef.remove();
+      if (liveViewersRef) liveViewersRef.remove();
+
+      // Stop owner stream tracks
+      if (ownerStream) {
+        ownerStream.getTracks().forEach(t => t.stop());
+        ownerStream = null;
+      }
+
+      // Reset UI
+      createLiveForm.style.display = 'flex';
+      livePreviewOwner.style.display = 'none';
+      inputArea.style.display = 'none';
+      messagesDiv.innerHTML = '<em>Create a live stream to start chatting</em>';
+      liveNameInput.value = '';
+      liveDescInput.value = '';
+      ownerLiveName.textContent = '';
+      ownerLiveDesc.textContent = '';
+    }
+
+    // Clean up listeners on logout or end live
+    function cleanupListeners() {
+      if (liveStreamDataRef) liveStreamDataRef.off();
+      if (liveMessagesRef) liveMessagesRef.off();
+      if (liveViewersRef) liveViewersRef.off();
+      if (viewerRef) {
+        viewerRef.remove();
+        viewerRef = null;
+      }
+    }
+
+    function stopStreamingIfOwner() {
+      if (currentUser && currentUser.email === STREAM_OWNER_EMAIL) {
+        endLiveStream();
+      }
+    }
+
+    // Chat functionality
+    function setupChatListeners() {
+      if (!liveMessagesRef) return;
+
+      liveMessagesRef.off();
+      liveMessagesRef.on('child_added', (snapshot) => {
+        const data = snapshot.val();
+        addMessageToChat(data);
+      });
+    }
+
+    function addMessageToChat({uid, displayName, photoURL, text}) {
+      const msgDiv = document.createElement('div');
+      msgDiv.classList.add('chat-message');
+      const avatar = document.createElement('img');
+      avatar.src = photoURL || 'https://www.gravatar.com/avatar?d=mp&s=32';
+      avatar.alt = displayName || 'User';
+      const msgText = document.createElement('span');
+      msgText.innerHTML = `<strong>${displayName || 'User'}</strong>: ${escapeHTML(text)}`;
+      msgDiv.appendChild(avatar);
+      msgDiv.appendChild(msgText);
+      messagesDiv.appendChild(msgDiv);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    sendBtn.onclick = () => {
+      sendMessage();
+    };
+
+    msgInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    function sendMessage() {
+      const text = msgInput.value.trim();
+      if (!text || !liveMessagesRef) return;
+      const msgObj = {
+        uid: currentUser.uid,
+        displayName: currentUser.displayName,
+        photoURL: currentUser.photoURL,
+        text
+      };
+      liveMessagesRef.push(msgObj);
+      msgInput.value = '';
+    }
+
+    // Viewer count tracking
+    function setupViewerCountListeners() {
+      if (!liveViewersRef) return;
+
+      liveViewersRef.on('value', (snap) => {
+        const count = snap.numChildren() || 0;
+        updateViewerCountUI(count);
+      });
+    }
+
+    // Add self as viewer to liveViewers node and remove on disconnect
+    function addViewer() {
+      if (!liveViewersRef || !currentUser) return;
+      viewerRef = liveViewersRef.push();
+      viewerRef.set({ uid: currentUser.uid, timestamp: Date.now() });
+      viewerRef.onDisconnect().remove();
+    }
+
+    // Owner listeners for live stream data removal and viewer count
+    function setupOwnerListeners() {
+      // Listen if live stream is removed (for example, force removed by another device)
+      db.ref('liveStreams/owner').on('value', snapshot => {
+        if (!snapshot.exists() && liveActive) {
+          alert("Live stream ended.");
+          endLiveStream();
+        }
+      });
+    }
+
+    // Viewer listeners to watch if live stream is active
+    function setupViewerListeners() {
+      db.ref('liveStreams/owner').on('value', snapshot => {
+        const data = snapshot.val();
+        if (data) {
+          // Live is active, show info & chat
+          livePreviewUser.style.display = 'flex';
+          inputArea.style.display = 'flex';
+          messagesDiv.innerHTML = '';
+          userLiveName.textContent = data.name || 'Live Stream';
+          userLiveDesc.textContent = data.description || '';
+          livePreviewOwner.style.display = 'none';
+          createLiveForm.style.display = 'none';
+
+          // Setup chat and viewers refs
+          liveMessagesRef = db.ref('liveMessages/owner');
+          liveViewersRef = db.ref('liveViewers/owner');
+
+          setupChatListeners();
+          setupViewerCountListeners();
+
+          addViewer();
+        } else {
+          // No live stream active
+          livePreviewUser.style.display = 'none';
+          inputArea.style.display = 'none';
+          messagesDiv.innerHTML = '<em>Waiting for a live stream...</em>';
+          if (liveMessagesRef) liveMessagesRef.off();
+          if (liveViewersRef) liveViewersRef.off();
+          if (viewerRef) {
+            viewerRef.remove();
+            viewerRef = null;
+          }
+        }
+      });
+    }
+
+    // Simple escape HTML
+    function escapeHTML(str) {
+      return str.replace(/[&<>"']/g, (m) => {
+        switch(m) {
+          case '&': return '&amp;';
+          case '<': return '&lt;';
+          case '>': return '&gt;';
+          case '"': return '&quot;';
+          case "'": return '&#39;';
+          default: return m;
+        }
+      });
+    }
   </script>
 </body>
 </html>
