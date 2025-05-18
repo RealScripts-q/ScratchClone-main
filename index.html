@@ -2,15 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Firebase Google Auth Chat + Screen Share</title>
+  <title>Live Chat + Stream</title>
   <style>
-    /* Reset and base */
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
-      margin: 0; padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
       display: flex;
       height: 100vh;
       background: #121212;
@@ -19,19 +16,30 @@
 
     #stream {
       flex: 2;
-      background: #000;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      position: relative;
+      background: #000;
       border-right: 2px solid #333;
+      position: relative;
     }
 
     video#screenVideo {
       width: 100%;
       height: 100%;
       object-fit: contain;
-      background: #000;
+    }
+
+    #viewerCount {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #222;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #00ff99;
     }
 
     #chat {
@@ -61,13 +69,9 @@
       flex: 1;
       margin: 0 5px;
     }
-    button:hover {
-      background: #007bff;
-    }
-    button:disabled {
-      background: #555;
-      cursor: not-allowed;
-    }
+
+    button:hover { background: #007bff; }
+    button:disabled { background: #555; cursor: not-allowed; }
 
     #messages {
       flex: 1;
@@ -100,6 +104,7 @@
     .chat-message span {
       color: #ccc;
     }
+
     .chat-message .owner {
       font-weight: 700;
       color: #00ff99;
@@ -121,10 +126,7 @@
       color: #eee;
     }
 
-    #msgInput:focus {
-      outline: none;
-      background: #333;
-    }
+    #msgInput:focus { outline: none; background: #333; }
 
     #sendBtn {
       flex-shrink: 0;
@@ -132,22 +134,19 @@
       border-radius: 6px;
       background: #007bff;
       font-weight: 600;
-      transition: background 0.3s ease;
     }
 
-    #sendBtn:hover {
-      background: #0056b3;
-    }
+    #sendBtn:hover { background: #0056b3; }
 
-    em {
-      color: #666;
-    }
+    em { color: #666; }
   </style>
 </head>
 <body>
   <div id="stream">
+    <div id="viewerCount">👁️ Viewers: 0</div>
     <video id="screenVideo" autoplay muted></video>
   </div>
+
   <div id="chat">
     <div id="auth-area">
       <button id="loginBtn">Sign in with Google</button>
@@ -181,9 +180,13 @@
     const auth = firebase.auth();
     const db = firebase.database();
 
+    const STREAM_OWNER_EMAIL = "realgyjs@gmail.com"; // 🔥 YOUR EMAIL HERE
+
     const loginBtn = document.getElementById('loginBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     const shareBtn = document.getElementById('shareBtn');
+    const viewerCount = document.getElementById('viewerCount');
+
     const messagesDiv = document.getElementById('messages');
     const msgInput = document.getElementById('msgInput');
     const sendBtn = document.getElementById('sendBtn');
@@ -192,16 +195,25 @@
 
     let currentUser = null;
     let messagesRef = null;
+    let viewerRef = null;
 
     auth.onAuthStateChanged(user => {
       if (user) {
         currentUser = user;
         loginBtn.style.display = 'none';
         logoutBtn.style.display = 'inline-block';
-        shareBtn.style.display = 'inline-block';
         inputArea.style.display = 'flex';
+
+        // Only owner can share screen
+        if (user.email === STREAM_OWNER_EMAIL) {
+          shareBtn.style.display = 'inline-block';
+        } else {
+          shareBtn.style.display = 'none';
+        }
+
         messagesDiv.innerHTML = '';
         startListeningMessages();
+        updateViewers(true);
       } else {
         currentUser = null;
         loginBtn.style.display = 'inline-block';
@@ -210,6 +222,7 @@
         inputArea.style.display = 'none';
         messagesDiv.innerHTML = '<em>Please sign in to chat</em>';
         stopListeningMessages();
+        updateViewers(false);
       }
     });
 
@@ -251,7 +264,6 @@
         img.alt = 'PFP';
 
         const span = document.createElement('span');
-        // Highlight current user's messages
         if (msg.user === (currentUser.displayName || "Anonymous")) {
           span.textContent = `${msg.user}: ${msg.text}`;
           span.className = 'owner';
@@ -268,6 +280,24 @@
 
     function stopListeningMessages() {
       if (messagesRef) messagesRef.off();
+    }
+
+    // Viewer counter
+    function updateViewers(isJoining) {
+      const viewersRef = db.ref("viewers");
+
+      if (isJoining && currentUser) {
+        viewerRef = viewersRef.child(currentUser.uid);
+        viewerRef.set(true);
+        viewerRef.onDisconnect().remove();
+      } else if (viewerRef) {
+        viewerRef.remove();
+      }
+
+      viewersRef.on("value", snapshot => {
+        const count = snapshot.numChildren();
+        viewerCount.textContent = `👁️ Viewers: ${count}`;
+      });
     }
 
     shareBtn.onclick = async () => {
