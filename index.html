@@ -3,58 +3,61 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Live Stream Chat with Firebase</title>
+<title>Live Stream + Chat with Recording & Replay</title>
 <style>
-  body { font-family: Arial, sans-serif; max-width: 600px; margin: 2rem auto; }
-  #chat { border: 1px solid #ccc; padding: 1rem; height: 300px; overflow-y: scroll; margin-bottom: 1rem; background: #f9f9f9; }
-  #chat p { margin: 0 0 10px; }
-  #loginForm, #signupForm, #chatForm { margin-bottom: 1rem; }
-  #chatForm input[type=text] { width: 80%; padding: 0.5rem; }
-  #chatForm button { padding: 0.5rem 1rem; }
-  #userInfo { margin-bottom: 1rem; }
+  body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; }
+  #loginPanel, #streamPanel, #watchPanel { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; }
+  #chatLog { height: 200px; overflow-y: scroll; background: #f9f9f9; padding: 10px; margin-top: 10px; }
+  #chatLog p { margin: 5px 0; }
+  #streamsList p { cursor: pointer; color: blue; text-decoration: underline; }
+  video { width: 100%; max-height: 400px; background: black; }
   .hidden { display: none; }
+  button { padding: 6px 12px; margin-top: 10px; }
 </style>
 </head>
 <body>
 
-<h1>Live Stream Chat</h1>
+<h1>Live Stream + Chat with Recording & Replay</h1>
 
-<div id="userInfo" class="hidden">
-  Logged in as: <span id="userEmail"></span> 
-  <button id="logoutBtn">Logout</button>
-</div>
-
-<!-- Signup Form -->
-<div id="signupForm">
-  <h3>Sign Up</h3>
-  <input type="email" id="signupEmail" placeholder="Email" />
-  <input type="password" id="signupPassword" placeholder="Password" />
+<!-- LOGIN -->
+<div id="loginPanel">
+  <h3>Login / Signup</h3>
+  <input id="email" type="email" placeholder="Email" /><br />
+  <input id="password" type="password" placeholder="Password" /><br />
   <button id="signupBtn">Sign Up</button>
-  <p>Already have an account? <a href="#" id="showLogin">Login here</a></p>
-</div>
-
-<!-- Login Form -->
-<div id="loginForm" class="hidden">
-  <h3>Login</h3>
-  <input type="email" id="loginEmail" placeholder="Email" />
-  <input type="password" id="loginPassword" placeholder="Password" />
   <button id="loginBtn">Login</button>
-  <p>Don't have an account? <a href="#" id="showSignup">Sign up here</a></p>
+  <p id="authStatus"></p>
 </div>
 
-<!-- Chat Dashboard -->
-<div id="dashboard" class="hidden">
-  <div id="chat"></div>
-  <form id="chatForm">
-    <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" required />
-    <button type="submit">Send</button>
-  </form>
+<!-- STREAM CREATION -->
+<div id="streamPanel" class="hidden">
+  <p>Logged in as <b id="userEmail"></b> <button id="logoutBtn">Logout</button></p>
+  <button id="startStreamBtn">Start Streaming (Screen Share + Record)</button>
+  <button id="stopStreamBtn" disabled>Stop Streaming</button>
+  
+  <div id="streamControls" class="hidden">
+    <h3>Live Stream Chat</h3>
+    <div id="chatLog"></div>
+    <input id="chatInput" type="text" placeholder="Type chat message" />
+    <button id="sendChatBtn">Send</button>
+  </div>
 </div>
 
-<!-- Firebase SDK -->
+<!-- WATCH STREAM -->
+<div id="watchPanel" class="hidden">
+  <h3>Available Streams (Past Streams)</h3>
+  <div id="streamsList"></div>
+  
+  <h3>Stream Player</h3>
+  <video id="videoPlayer" controls></video>
+  <div id="replayChatLog" style="height: 150px; overflow-y: scroll; background: #eee; padding: 10px; margin-top: 10px;"></div>
+</div>
+
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
 <script>
   // Your Firebase config
@@ -72,131 +75,271 @@
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
+  const storage = firebase.storage();
 
-  // DOM Elements
-  const signupForm = document.getElementById('signupForm');
-  const loginForm = document.getElementById('loginForm');
-  const dashboard = document.getElementById('dashboard');
-  const userInfo = document.getElementById('userInfo');
-  const userEmailSpan = document.getElementById('userEmail');
+  // UI Elements
+  const loginPanel = document.getElementById('loginPanel');
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const signupBtn = document.getElementById('signupBtn');
+  const loginBtn = document.getElementById('loginBtn');
+  const authStatus = document.getElementById('authStatus');
+
+  const streamPanel = document.getElementById('streamPanel');
+  const userEmailDisplay = document.getElementById('userEmail');
   const logoutBtn = document.getElementById('logoutBtn');
 
-  const signupEmail = document.getElementById('signupEmail');
-  const signupPassword = document.getElementById('signupPassword');
-  const signupBtn = document.getElementById('signupBtn');
+  const startStreamBtn = document.getElementById('startStreamBtn');
+  const stopStreamBtn = document.getElementById('stopStreamBtn');
+  const streamControls = document.getElementById('streamControls');
 
-  const loginEmail = document.getElementById('loginEmail');
-  const loginPassword = document.getElementById('loginPassword');
-  const loginBtn = document.getElementById('loginBtn');
+  const chatLog = document.getElementById('chatLog');
+  const chatInput = document.getElementById('chatInput');
+  const sendChatBtn = document.getElementById('sendChatBtn');
 
-  const showLoginLink = document.getElementById('showLogin');
-  const showSignupLink = document.getElementById('showSignup');
+  const watchPanel = document.getElementById('watchPanel');
+  const streamsList = document.getElementById('streamsList');
+  const videoPlayer = document.getElementById('videoPlayer');
+  const replayChatLog = document.getElementById('replayChatLog');
 
-  const chatDiv = document.getElementById('chat');
-  const chatForm = document.getElementById('chatForm');
-  const messageInput = document.getElementById('messageInput');
+  // State vars
+  let mediaRecorder;
+  let recordedChunks = [];
+  let streamStartTime = 0;
+  let chatMessages = [];
+  let currentUser = null;
+  let currentStreamId = null;
+  let chatListener = null;
 
-  // Switch between signup/login forms
-  showLoginLink.onclick = e => {
-    e.preventDefault();
-    signupForm.classList.add('hidden');
-    loginForm.classList.remove('hidden');
-  };
-
-  showSignupLink.onclick = e => {
-    e.preventDefault();
-    loginForm.classList.add('hidden');
-    signupForm.classList.remove('hidden');
-  };
-
-  // Signup handler
-  signupBtn.onclick = e => {
-    e.preventDefault();
-    const email = signupEmail.value.trim();
-    const pass = signupPassword.value;
+  // Auth events
+  signupBtn.onclick = () => {
+    const email = emailInput.value.trim();
+    const pass = passwordInput.value;
     auth.createUserWithEmailAndPassword(email, pass)
-      .catch(err => alert(err.message));
+      .catch(e => authStatus.textContent = e.message);
   };
 
-  // Login handler
-  loginBtn.onclick = e => {
-    e.preventDefault();
-    const email = loginEmail.value.trim();
-    const pass = loginPassword.value;
+  loginBtn.onclick = () => {
+    const email = emailInput.value.trim();
+    const pass = passwordInput.value;
     auth.signInWithEmailAndPassword(email, pass)
-      .catch(err => alert(err.message));
+      .catch(e => authStatus.textContent = e.message);
   };
 
-  // Logout
-  logoutBtn.onclick = () => auth.signOut();
+  logoutBtn.onclick = () => {
+    auth.signOut();
+  };
 
-  // Auth state change
   auth.onAuthStateChanged(user => {
     if (user) {
-      // Logged in
-      userEmailSpan.textContent = user.email;
-      signupForm.classList.add('hidden');
-      loginForm.classList.add('hidden');
-      userInfo.classList.remove('hidden');
-      dashboard.classList.remove('hidden');
-
-      // Load chat messages and listen for new ones
-      loadChatMessages();
+      currentUser = user;
+      authStatus.textContent = '';
+      loginPanel.classList.add('hidden');
+      streamPanel.classList.remove('hidden');
+      watchPanel.classList.remove('hidden');
+      userEmailDisplay.textContent = user.email;
+      loadStreamList();
     } else {
-      // Logged out
-      userEmailSpan.textContent = '';
-      signupForm.classList.remove('hidden');
-      loginForm.classList.add('hidden');
-      userInfo.classList.add('hidden');
-      dashboard.classList.add('hidden');
-      chatDiv.innerHTML = '';
+      currentUser = null;
+      loginPanel.classList.remove('hidden');
+      streamPanel.classList.add('hidden');
+      watchPanel.classList.add('hidden');
+      clearStream();
     }
   });
 
-  // Load chat messages and listen for new ones
-  function loadChatMessages() {
-    const chatRef = db.ref('liveChatMessages');
-    chatRef.off(); // remove previous listeners
+  // Start stream - record screen + chat
+  startStreamBtn.onclick = async () => {
+    try {
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      recordedChunks = [];
+      chatMessages = [];
+      streamStartTime = Date.now();
+      currentStreamId = db.ref('streams').push().key;
 
-    chatDiv.innerHTML = '';
+      mediaRecorder = new MediaRecorder(displayStream, { mimeType: 'video/webm; codecs=vp8,opus' });
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+      mediaRecorder.onstop = uploadStream;
 
-    chatRef.limitToLast(100).on('child_added', snapshot => {
-      const msg = snapshot.val();
-      appendMessage(msg);
-    });
+      mediaRecorder.start(2000); // send data every 2 seconds chunks
 
-    chatRef.limitToLast(100).on('child_removed', snapshot => {
-      // optionally handle deletions
-    });
-  }
+      // UI changes
+      startStreamBtn.disabled = true;
+      stopStreamBtn.disabled = false;
+      streamControls.classList.remove('hidden');
 
-  // Append a message to chat div
-  function appendMessage(msg) {
-    const p = document.createElement('p');
-    const time = new Date(msg.timestamp).toLocaleTimeString();
-    p.textContent = `[${time}] ${msg.user}: ${msg.text}`;
-    chatDiv.appendChild(p);
-    chatDiv.scrollTop = chatDiv.scrollHeight;
-  }
+      // Listen for chat input
+      sendChatBtn.onclick = sendChatMessage;
 
-  // Send new chat message
-  chatForm.onsubmit = e => {
-    e.preventDefault();
-    const user = auth.currentUser;
-    if (!user) return alert('You must be logged in to send messages');
-
-    const text = messageInput.value.trim();
-    if (text === '') return;
-
-    const msg = {
-      user: user.email,
-      text,
-      timestamp: Date.now()
-    };
-
-    db.ref('liveChatMessages').push(msg);
-    messageInput.value = '';
+      // Add chat listener to show live messages
+      chatLog.innerHTML = '';
+      addLiveChatListener(currentStreamId);
+      
+      alert("Streaming started. Share your screen!");
+    } catch (err) {
+      alert("Failed to start screen capture: " + err.message);
+    }
   };
+
+  // Stop stream - stop recording and upload
+  stopStreamBtn.onclick = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    }
+    startStreamBtn.disabled = false;
+    stopStreamBtn.disabled = true;
+    streamControls.classList.add('hidden');
+    removeLiveChatListener();
+    alert("Streaming stopped. Uploading video...");
+  };
+
+  // Send chat message during stream
+  function sendChatMessage() {
+    if (!currentStreamId || !currentUser) return;
+    const text = chatInput.value.trim();
+    if (!text) return;
+    const timestamp = Date.now() - streamStartTime;
+    const msgObj = {
+      user: currentUser.email,
+      text,
+      timestamp,
+      createdAt: Date.now()
+    };
+    chatInput.value = '';
+
+    // Push to realtime DB under streams/{streamId}/chat
+    db.ref(`streams/${currentStreamId}/chat`).push(msgObj);
+
+    // Append locally
+    appendChatMessage(msgObj, chatLog);
+  }
+
+  // Show chat message
+  function appendChatMessage(msg, container) {
+    const p = document.createElement('p');
+    const timeStr = new Date(streamStartTime + (msg.timestamp || 0)).toLocaleTimeString();
+    p.textContent = `[${timeStr}] ${msg.user}: ${msg.text}`;
+    container.appendChild(p);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  // Listen for live chat updates during stream
+  function addLiveChatListener(streamId) {
+    if (chatListener) removeLiveChatListener();
+    const chatRef = db.ref(`streams/${streamId}/chat`);
+    chatListener = chatRef.on('child_added', snapshot => {
+      const msg = snapshot.val();
+      appendChatMessage(msg, chatLog);
+      chatMessages.push(msg);
+    });
+  }
+
+  // Remove live chat listener
+  function removeLiveChatListener() {
+    if (!chatListener || !currentStreamId) return;
+    db.ref(`streams/${currentStreamId}/chat`).off('child_added', chatListener);
+    chatListener = null;
+  }
+
+  // Upload recorded stream + chat after stopping
+  async function uploadStream() {
+    if (!currentStreamId) return;
+    // Combine recorded chunks to Blob
+    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+    const videoPath = `streams/${currentStreamId}/video.webm`;
+    const chatPath = `streams/${currentStreamId}/chat.json`;
+
+    // Upload video
+    const videoRef = storage.ref(videoPath);
+    await videoRef.put(blob);
+
+    // Upload chat JSON (chatMessages array)
+    const chatRef = storage.ref(chatPath);
+    await chatRef.putString(JSON.stringify(chatMessages));
+
+    // Save stream metadata in DB
+    db.ref(`streams/${currentStreamId}`).update({
+      creator: currentUser.email,
+      startedAt: streamStartTime,
+      videoPath,
+      chatPath,
+      endedAt: Date.now()
+    });
+
+    alert("Stream uploaded!");
+    clearStream();
+    loadStreamList();
+  }
+
+  // Clear stream session data
+  function clearStream() {
+    recordedChunks = [];
+    chatMessages = [];
+    streamStartTime = 0;
+    currentStreamId = null;
+    chatLog.innerHTML = '';
+    chatInput.value = '';
+  }
+
+  // Load list of streams from DB
+  async function loadStreamList() {
+    streamsList.innerHTML = '';
+    const snapshot = await db.ref('streams').orderByChild('endedAt').limitToLast(20).once('value');
+    const streams = snapshot.val();
+    if (!streams) {
+      streamsList.textContent = "No streams found.";
+      return;
+    }
+
+    Object.entries(streams)
+      .sort((a,b) => b[1].endedAt - a[1].endedAt) // newest first
+      .forEach(([id, stream]) => {
+        if (!stream.videoPath || !stream.chatPath) return; // ignore incomplete
+        const p = document.createElement('p');
+        p.textContent = `${stream.creator} — ${new Date(stream.startedAt).toLocaleString()}`;
+        p.style.cursor = 'pointer';
+        p.onclick = () => playStream(id, stream);
+        streamsList.appendChild(p);
+      });
+  }
+
+  // Play saved stream with chat replay sync
+  async function playStream(streamId, streamData) {
+    if (!streamData.videoPath || !streamData.chatPath) {
+      alert("Stream data incomplete");
+      return;
+    }
+    // Load video URL
+    const videoURL = await storage.ref(streamData.videoPath).getDownloadURL();
+    videoPlayer.src = videoURL;
+    videoPlayer.play();
+
+    // Load chat JSON
+    const chatUrl = await storage.ref(streamData.chatPath).getDownloadURL();
+    const chatResponse = await fetch(chatUrl);
+    const savedChat = await chatResponse.json();
+
+    replayChatLog.innerHTML = '';
+    // Sync chat replay on video timeupdate event
+    videoPlayer.ontimeupdate = () => {
+      const currentTimeMs = videoPlayer.currentTime * 1000;
+      replayChatLog.innerHTML = '';
+      // Show all chat with timestamp <= currentTimeMs
+      savedChat.forEach(msg => {
+        if (msg.timestamp <= currentTimeMs) {
+          const p = document.createElement('p');
+          const timeStr = new Date(streamData.startedAt + msg.timestamp).toLocaleTimeString();
+          p.textContent = `[${timeStr}] ${msg.user}: ${msg.text}`;
+          replayChatLog.appendChild(p);
+        }
+      });
+      replayChatLog.scrollTop = replayChatLog.scrollHeight;
+    };
+  }
+
 </script>
+
 </body>
 </html>
