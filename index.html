@@ -2,88 +2,77 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Live Stream Dashboard</title>
+  <title>Live Chat + Stream</title>
   <style>
-    /* Basic styles for layout */
+    * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #121212;
-      color: #ffffff;
-    }
-    #login-screen, #dashboard, #stream-view {
-      display: none;
-      padding: 20px;
-    }
-    #dashboard, #stream-view {
+      font-family: 'Segoe UI', sans-serif;
       display: flex;
-      flex-direction: column;
       height: 100vh;
+      background: #121212;
+      color: #eee;
     }
-    #streams-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-      margin-top: 10px;
-    }
-    .stream-card {
-      background: #222;
-      padding: 10px;
-      width: 220px;
-      border-radius: 6px;
-      cursor: pointer;
-      box-shadow: 0 0 10px #000;
+
+    #stream {
+      flex: 2;
       display: flex;
       flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      border-right: 2px solid #333;
+      position: relative;
     }
-    .stream-card img {
+
+    video#screenVideo {
       width: 100%;
-      height: 120px;
-      object-fit: cover;
-      border-radius: 4px;
+      height: 100%;
+      object-fit: contain;
     }
-    .stream-card h3 {
-      margin: 8px 0 4px 0;
-      font-size: 1.1rem;
+
+    #viewerCount {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #222;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 14px;
       color: #00ff99;
     }
-    .stream-card p {
-      margin: 0;
-      font-size: 0.9rem;
-      color: #ccc;
-      flex-grow: 1;
-    }
-    #create-stream-form {
-      background: #222;
-      padding: 15px;
-      border-radius: 6px;
-      margin-top: 15px;
-      max-width: 400px;
-    }
-    #create-stream-form input, #create-stream-form textarea {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 10px;
-      border: none;
-      border-radius: 4px;
-      background: #333;
-      color: #eee;
-      font-size: 1rem;
-    }
-    #create-stream-form label {
-      font-weight: 600;
-      margin-bottom: 5px;
-      display: block;
-    }
+
     #chat {
-      background: #1e1e1e;
-      border-radius: 6px;
-      padding: 10px;
-      width: 300px;
+      flex: 1;
       display: flex;
       flex-direction: column;
-      height: 100%;
+      background: #1e1e1e;
+      border-left: 2px solid #333;
+      padding: 10px;
     }
+
+    #auth-area {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    button {
+      background: #3a3a3a;
+      border: none;
+      color: #eee;
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-weight: 600;
+      transition: background 0.3s ease;
+      flex: 1;
+      margin: 0 5px;
+    }
+
+    button:hover { background: #007bff; }
+    button:disabled { background: #555; cursor: not-allowed; }
+
     #messages {
       flex: 1;
       overflow-y: auto;
@@ -93,186 +82,232 @@
       font-size: 14px;
       line-height: 1.4;
       box-shadow: inset 0 0 10px #000;
-      margin-bottom: 10px;
     }
+
     .chat-message {
-      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      word-break: break-word;
     }
-    .chat-message strong {
+
+    .chat-message img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      margin-right: 10px;
+      flex-shrink: 0;
+      border: 2px solid #007bff;
+      background: #222;
+    }
+
+    .chat-message span {
+      color: #ccc;
+    }
+
+    .chat-message .owner {
+      font-weight: 700;
       color: #00ff99;
     }
+
     #input-area {
       display: flex;
+      margin-top: 10px;
       gap: 8px;
     }
+
     #msgInput {
       flex: 1;
-      padding: 8px 12px;
-      border-radius: 6px;
+      padding: 10px 12px;
       border: none;
+      border-radius: 6px;
+      font-size: 14px;
       background: #222;
       color: #eee;
     }
-    #msgInput:focus {
-      outline: none;
-      background: #333;
-    }
+
+    #msgInput:focus { outline: none; background: #333; }
+
     #sendBtn {
-      padding: 8px 20px;
+      flex-shrink: 0;
+      padding: 10px 20px;
       border-radius: 6px;
       background: #007bff;
       font-weight: 600;
-      border: none;
-      cursor: pointer;
     }
-    #sendBtn:hover {
-      background: #0056b3;
-    }
-    #streamVideo {
-      width: 100%;
-      max-height: 480px;
-      background: #000;
-      margin-bottom: 10px;
-    }
-    #logoutBtn {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      background: #d33;
-      border: none;
-      border-radius: 4px;
-      padding: 8px 12px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    #stream-container {
-      display: flex;
-      flex: 1;
-    }
-    #video-section {
-      flex: 1;
-      padding: 10px;
-    }
-    #controls {
-      margin-top: 10px;
-    }
-    button {
-      background: #3a3a3a;
-      border: none;
-      color: #eee;
-      padding: 10px 15px;
-      cursor: pointer;
-      border-radius: 4px;
-      font-weight: 600;
-      margin: 5px 0;
-      transition: background 0.3s ease;
-    }
-    button:hover {
-      background: #007bff;
-    }
+
+    #sendBtn:hover { background: #0056b3; }
+
+    em { color: #666; }
   </style>
 </head>
 <body>
-
-<!-- LOGIN SCREEN -->
-<div id="login-screen">
-  <button id="loginBtn">Sign in with Google</button>
-</div>
-
-<!-- DASHBOARD -->
-<div id="dashboard">
-  <h1>Live Streams</h1>
-  <div id="streams-list"></div>
-
-  <!-- Only show this to owner -->
-  <div id="create-stream-form" style="display:none;">
-    <h2>Create New Stream</h2>
-    <label for="streamName">Stream Name</label>
-    <input id="streamName" type="text" placeholder="Enter stream name" />
-    <label for="streamDesc">Description</label>
-    <textarea id="streamDesc" rows="3" placeholder="Stream description"></textarea>
-    <label for="streamThumb">Thumbnail Image</label>
-    <input id="streamThumb" type="file" accept="image/*" />
-    <button id="createStreamBtn">Create Stream</button>
+  <div id="stream">
+    <div id="viewerCount">👁️ Viewers: 0</div>
+    <video id="screenVideo" autoplay muted></video>
   </div>
 
-  <button id="logoutBtn">Logout</button>
-</div>
-
-<!-- STREAM VIEW -->
-<div id="stream-view">
-  <button id="backBtn">← Back to Dashboard</button>
-  <h2 id="streamTitle"></h2>
-  <div id="stream-container">
-    <div id="video-section">
-      <video id="streamVideo" controls autoplay muted></video>
-      <div id="controls" style="display:none;">
-        <button id="toggleMicBtn">Toggle Mic</button>
-        <button id="toggleCamBtn">Toggle Camera</button>
-      </div>
+  <div id="chat">
+    <div id="auth-area">
+      <button id="loginBtn">Sign in with Google</button>
+      <button id="logoutBtn" style="display:none;">Logout</button>
+      <button id="shareBtn" style="display:none;">Share Screen</button>
     </div>
-    <div id="chat">
-      <div id="messages"><em>Loading chat...</em></div>
-      <div id="input-area" style="display:none;">
-        <input id="msgInput" type="text" placeholder="Type your message..." autocomplete="off" />
-        <button id="sendBtn">Send</button>
-      </div>
+    <div id="messages"><em>Please sign in to chat</em></div>
+    <div id="input-area" style="display:none;">
+      <input id="msgInput" type="text" placeholder="Type your message..." autocomplete="off" />
+      <button id="sendBtn">Send</button>
     </div>
   </div>
-</div>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
-<script>
-  // Config - replace with your Firebase project config
-  const firebaseConfig = {
-    apiKey: "AIzaSyCq74S-8b4maDXEKkDXwoaz28Y_Qf0N_34",
-    authDomain: "livestreamchat-268a9.firebaseapp.com",
-    databaseURL: "https://livestreamchat-268a9-default-rtdb.firebaseio.com",
-    projectId: "livestreamchat-268a9",
-    storageBucket: "livestreamchat-268a9.appspot.com",
-    messagingSenderId: "761482927725",
-    appId: "1:761482927725:web:7d525941da69c424bb6964"
-  };
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCq74S-8b4maDXEKkDXwoaz28Y_Qf0N_34",
+      authDomain: "livestreamchat-268a9.firebaseapp.com",
+      databaseURL: "https://livestreamchat-268a9-default-rtdb.firebaseio.com",
+      projectId: "livestreamchat-268a9",
+      storageBucket: "livestreamchat-268a9.appspot.com",
+      messagingSenderId: "761482927725",
+      appId: "1:761482927725:web:7d525941da69c424bb6964"
+    };
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-  const storage = firebase.storage();
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-  const OWNER_EMAIL = "realgyjs@gmail.com";
+    const STREAM_OWNER_EMAIL = "realgyjs@gmail.com"; // 🔥 YOUR EMAIL HERE
 
-  // UI Elements
-  const loginScreen = document.getElementById('login-screen');
-  const loginBtn = document.getElementById('loginBtn');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const shareBtn = document.getElementById('shareBtn');
+    const viewerCount = document.getElementById('viewerCount');
 
-  const dashboard = document.getElementById('dashboard');
-  const streamsList = document.getElementById('streams-list');
-  const createForm = document.getElementById('create-stream-form');
-  const streamNameInput = document.getElementById('streamName');
-  const streamDescInput = document.getElementById('streamDesc');
-  const streamThumbInput = document.getElementById('streamThumb');
-  const createStreamBtn = document.getElementById('createStreamBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
+    const messagesDiv = document.getElementById('messages');
+    const msgInput = document.getElementById('msgInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const inputArea = document.getElementById('input-area');
+    const screenVideo = document.getElementById('screenVideo');
 
-  const streamView = document.getElementById('stream-view');
-  const backBtn = document.getElementById('backBtn');
-  const streamTitle = document.getElementById('streamTitle');
-  const streamDescText = document.getElementById('streamDescText');
-  const streamVideo = document.getElementById('streamVideo');
+    let currentUser = null;
+    let messagesRef = null;
+    let viewerRef = null;
 
-  // Chat UI
-  const messagesDiv = document.getElementById('messages');
-  const inputArea = document.getElementById('input-area');
-  const msgInput = document.getElementById('msgInput');
-  const sendBtn = document.getElementById('sendBtn');
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'inline-block';
+        inputArea.style.display = 'flex';
 
-  const controlsDiv = document.getElementById('controls');
-  const toggleMicBtn = document.getElementById('toggleMicBtn');
-  const toggleCamBtn = document.getElementById('toggle
-::contentReference[oaicite:25]{index=25}
- 
+        // Only owner can share screen
+        if (user.email === STREAM_OWNER_EMAIL) {
+          shareBtn.style.display = 'inline-block';
+        } else {
+          shareBtn.style.display = 'none';
+        }
+
+        messagesDiv.innerHTML = '';
+        startListeningMessages();
+        updateViewers(true);
+      } else {
+        currentUser = null;
+        loginBtn.style.display = 'inline-block';
+        logoutBtn.style.display = 'none';
+        shareBtn.style.display = 'none';
+        inputArea.style.display = 'none';
+        messagesDiv.innerHTML = '<em>Please sign in to chat</em>';
+        stopListeningMessages();
+        updateViewers(false);
+      }
+    });
+
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(e => alert('Sign-in error: ' + e.message));
+    };
+
+    logoutBtn.onclick = () => auth.signOut();
+
+    sendBtn.onclick = () => {
+      if (!currentUser) return;
+      const text = msgInput.value.trim();
+      if (!text) return;
+
+      db.ref('messages').push({
+        user: currentUser.displayName || "Anonymous",
+        photoURL: currentUser.photoURL,
+        text: text,
+        timestamp: Date.now()
+      });
+
+      msgInput.value = '';
+    };
+
+    msgInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendBtn.click();
+    });
+
+    function startListeningMessages() {
+      messagesRef = db.ref('messages').limitToLast(50);
+      messagesRef.on('child_added', snapshot => {
+        const msg = snapshot.val();
+        const msgElem = document.createElement('div');
+        msgElem.className = 'chat-message';
+
+        const img = document.createElement('img');
+        img.src = msg.photoURL || 'https://via.placeholder.com/30';
+        img.alt = 'PFP';
+
+        const span = document.createElement('span');
+        if (msg.user === (currentUser.displayName || "Anonymous")) {
+          span.textContent = `${msg.user}: ${msg.text}`;
+          span.className = 'owner';
+        } else {
+          span.textContent = `${msg.user}: ${msg.text}`;
+        }
+
+        msgElem.appendChild(img);
+        msgElem.appendChild(span);
+        messagesDiv.appendChild(msgElem);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+    }
+
+    function stopListeningMessages() {
+      if (messagesRef) messagesRef.off();
+    }
+
+    // Viewer counter
+    function updateViewers(isJoining) {
+      const viewersRef = db.ref("viewers");
+
+      if (isJoining && currentUser) {
+        viewerRef = viewersRef.child(currentUser.uid);
+        viewerRef.set(true);
+        viewerRef.onDisconnect().remove();
+      } else if (viewerRef) {
+        viewerRef.remove();
+      }
+
+      viewersRef.on("value", snapshot => {
+        const count = snapshot.numChildren();
+        viewerCount.textContent = `👁️ Viewers: ${count}`;
+      });
+    }
+
+    shareBtn.onclick = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        screenVideo.srcObject = stream;
+      } catch (err) {
+        alert("Screen share failed: " + err.message);
+      }
+    };
+  </script>
+</body>
+</html>
